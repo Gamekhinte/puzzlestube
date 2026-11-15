@@ -79,8 +79,8 @@ body {
 
 /* Ruhige Bewegungen: kurz, weich auslaufend, kein Federn, kein Blinken. */
 :root { --weich: cubic-bezier(0.22, 1, 0.36, 1); }
-@keyframes schrei { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-.schrei { animation: schrei 1.4s ease-in-out infinite; transform-origin: 30% 50%; }
+@keyframes schrei { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+.schrei { animation: schrei 1.6s ease-in-out infinite; }
 @keyframes rauf { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .rauf { animation: rauf 0.32s var(--weich); }
 @keyframes wackel { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }

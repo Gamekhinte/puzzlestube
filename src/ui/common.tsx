@@ -33,7 +33,7 @@ export function Icon({ name, size = 28 }: { name: keyof typeof P | string; size?
 }
 
 export function Logo({ size = 40, animated = false }: { size?: number; animated?: boolean }) {
-  return <img src="screame-logo.svg" alt="screame Logo" width={size} height={size} className={animated ? 'schrei' : ''} draggable={false} />
+  return <img src="logo.jpg" alt="Puzzlestube Logo" width={size} height={size} className={animated ? 'schrei' : ''} style={{ borderRadius: size * 0.22, boxShadow: '0 3px 10px rgba(50,30,10,0.22)' }} draggable={false} />
 }
 
 /** Ladeanzeige im screame-Stil: der Mund pulsiert, darunter steht, was gerade passiert. */
