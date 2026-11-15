@@ -2,7 +2,7 @@
 
 Werbefreie Puzzle-Web-App, auf Deutsch und für Senioren gebaut. Läuft komplett im Browser, ohne Server.
 
-- 2D-Puzzles von 36 bis 1000 Teilen, mit eigenen Fotos oder 114 mitgelieferten Bildern
+- 2D-Puzzles von 36 bis 1000 Teilen, mit eigenen Fotos oder 170 mitgelieferten Bildern
 - Satellitenbilder von oben (in elf Bundesländern scharfe amtliche Luftbilder)
 - 28 3D-Puzzles mit 12, 24 oder 200 Teilen
 - Speichert den Stand von selbst, läuft nach dem ersten Laden offline

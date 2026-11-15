@@ -106,7 +106,7 @@ export class PuzzleEngine {
     this.pw = this.W / this.cols
     this.ph = this.H / this.rows
     // Rand um jedes Teil: Platz für die Nasen und den eingebackenen Schatten
-    const pad = Math.ceil(Math.min(this.pw, this.ph) * 0.12)
+    const pad = Math.ceil(Math.min(this.pw, this.ph) * 0.18)
     this.mx = Math.ceil(this.pw * MARGIN) + pad
     this.my = Math.ceil(this.ph * MARGIN) + pad
     this.lockedLayer = document.createElement('canvas')
@@ -177,28 +177,42 @@ export class PuzzleEngine {
         sp.height = Math.ceil(ph) + this.my * 2
         const c = sp.getContext('2d')!
         c.translate(this.mx, this.my)
-        // Schatten wird einmal ins Teil gebacken, kostet beim Ziehen also nichts
+        // Schatten und Pappdicke werden einmal ins Teil gebacken, kosten beim Ziehen also nichts
+        const thick = m * 0.035
         c.save()
-        c.shadowColor = 'rgba(38,22,8,0.55)'
-        c.shadowBlur = m * 0.07
-        c.shadowOffsetX = m * 0.02
-        c.shadowOffsetY = m * 0.045
+        c.shadowColor = 'rgba(38,22,8,0.5)'
+        c.shadowBlur = m * 0.09
+        c.shadowOffsetX = m * 0.025
+        c.shadowOffsetY = m * 0.06
+        c.translate(thick * 0.6, thick)
         c.fillStyle = '#3a2a1c'
         c.fill(p)
         c.restore()
+        // sichtbare Seitenkante: mehrere Lagen Pappe nach unten rechts versetzt
+        for (let k = 4; k >= 1; k--) {
+          c.save(); c.translate((thick * 0.6 * k) / 4, (thick * k) / 4)
+          c.fillStyle = k === 4 ? '#5e4430' : k === 3 ? '#7a5b40' : k === 2 ? '#94744f' : '#ad8d66'
+          c.fill(p); c.restore()
+        }
         c.save()
         c.clip(p)
         c.drawImage(this.img, -col * pw, -row * ph)
-        // geprägte Pappkante: Licht von oben links, Schatten unten rechts
+        // leichter Glanz über die Fläche: oben links heller, unten rechts dunkler
+        const sheen = c.createLinearGradient(0, 0, pw, ph)
+        sheen.addColorStop(0, 'rgba(255,255,255,0.10)'); sheen.addColorStop(0.5, 'rgba(255,255,255,0)'); sheen.addColorStop(1, 'rgba(0,0,0,0.10)')
+        c.fillStyle = sheen; c.fillRect(-pw, -ph, pw * 3, ph * 3)
+        // geprägte Kante in zwei weichen Stufen: Licht von oben links, Schatten unten rechts
         c.lineJoin = 'round'
-        c.lineWidth = lineW * 3.2
-        c.strokeStyle = 'rgba(0,0,0,0.26)'
-        c.translate(-lineW * 1.3, -lineW * 1.3); c.stroke(p)
-        c.strokeStyle = 'rgba(255,255,255,0.42)'
-        c.translate(lineW * 2.6, lineW * 2.6); c.stroke(p)
+        const bevel = (o: number, w: number, dark: string, light: string) => {
+          c.lineWidth = lineW * w
+          c.save(); c.translate(-lineW * o, -lineW * o); c.strokeStyle = dark; c.stroke(p); c.restore()
+          c.save(); c.translate(lineW * o, lineW * o); c.strokeStyle = light; c.stroke(p); c.restore()
+        }
+        bevel(2.4, 6, 'rgba(0,0,0,0.16)', 'rgba(255,255,255,0.22)')
+        bevel(1.3, 3, 'rgba(0,0,0,0.28)', 'rgba(255,255,255,0.5)')
         c.restore()
         c.lineWidth = lineW * 0.9
-        c.strokeStyle = 'rgba(30,20,12,0.5)'
+        c.strokeStyle = 'rgba(30,20,12,0.55)'
         c.stroke(p)
         this.sprites.push(sp)
       }

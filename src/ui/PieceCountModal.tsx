@@ -7,7 +7,7 @@ interface Props { imageId: string; onStart: (cols: number, rows: number) => void
 /** Auswahl der Teilezahl vor jedem Puzzle. Angefangene Größen zeigen ihren Stand. */
 export function PieceCountModal({ imageId, onStart, onClose }: Props) {
   const [info, setInfo] = useState<{ title: string; thumb: string } | null>(null)
-  const [landscape, setLandscape] = useState(true)
+  const [aspect, setAspect] = useState(4 / 3)
   const [saved, setSaved] = useState<Record<string, number>>({})
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
       if (dead || !i) return
       setInfo(i)
       const im = new Image()
-      im.onload = () => { if (!dead) setLandscape(im.naturalWidth >= im.naturalHeight) }
+      im.onload = () => { if (!dead && im.naturalHeight) setAspect(im.naturalWidth / im.naturalHeight) }
       im.src = i.thumb
     })
     void all<Game>('games').then((gs) => {
@@ -41,11 +41,11 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {SIZES.map((s) => {
-          const [c, r] = grid(s.count, landscape)
+          const [c, r] = grid(s.count, aspect)
           const pct = saved[gameId(imageId, c, r)]
           return (
             <button key={s.count} className={`btn flex-col !gap-0 !py-3 ${pct !== undefined ? 'btn-on' : ''}`} onClick={() => onStart(c, r)}>
-              <span className="text-[26px] font-bold leading-tight">{s.count} Teile</span>
+              <span className="text-[26px] font-bold leading-tight">{c * r} Teile</span>
               <span className="text-[18px] font-normal opacity-90">{pct !== undefined ? `${pct}% fertig, weiter` : `${c} × ${r}, ${s.level}`}</span>
             </button>
           )

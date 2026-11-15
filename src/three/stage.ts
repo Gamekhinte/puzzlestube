@@ -35,16 +35,37 @@ function canvasTex(cv: HTMLCanvasElement, color: boolean) {
   return t
 }
 
+/** Wählt für eine Fläche das Raster (gleiche Teilezahl), bei dem die Teile am ehesten quadratisch sind.
+ *  Dafür werden die echten Längen der Fläche in u- und v-Richtung gemessen. */
+function fitGrid(sf: Surface): Surface {
+  const n = sf.cols * sf.rows, k = 24
+  let lu = 0, lv = 0
+  for (const f of [0.25, 0.5, 0.75]) {
+    for (let i = 0; i < k; i++) {
+      lu += sf.fn(i / k, f).distanceTo(sf.fn((i + 1) / k, f))
+      lv += sf.fn(f, i / k).distanceTo(sf.fn(f, (i + 1) / k))
+    }
+  }
+  const aspect = lu / Math.max(1e-6, lv)
+  let best = { cols: sf.cols, rows: sf.rows }, score = Infinity
+  for (let cols = 1; cols <= n; cols++) {
+    if (n % cols) continue
+    const rows = n / cols
+    if (sf.wrap && cols < 3) continue // rundherum braucht es mindestens drei Teile
+    const sc = Math.abs(Math.log((aspect / cols) * rows))
+    if (sc < score - 1e-9) { score = sc; best = { cols, rows } }
+  }
+  return { ...sf, ...best }
+}
+
 /** Baut aus einer Oberfläche die einzelnen Puzzleteile. */
-function buildPieces(sf: Surface, seed: number, aniso: number): Piece[] {
+function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
+  const sf = fitGrid(sf0)
   const { cols, rows, wrap } = sf
   const cv = document.createElement('canvas')
   cv.width = sf.tw; cv.height = sf.th
   const c2 = cv.getContext('2d')!
   sf.paint(c2, sf.tw, sf.th)
-  const map = canvasTex(cv, true)
-  map.wrapS = wrap ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping
-  map.anisotropy = aniso
 
   const r = rng(seed)
   const hE: Edge[][] = [], vE: Edge[][] = []
@@ -79,8 +100,13 @@ function buildPieces(sf: Surface, seed: number, aniso: number): Piece[] {
       if (!ghost) { c.fillStyle = '#000'; c.fillRect(0, 0, S, S) }
       c.setTransform(S / (u1 - u0), 0, 0, S / (v1 - v0), (-u0 * S) / (u1 - u0), (-v0 * S) / (v1 - v0))
       if (ghost) {
-        c.fillStyle = 'rgba(255,250,240,0.42)'; c.fill(p)
-        c.lineJoin = 'round'; c.lineWidth = 0.045; c.strokeStyle = 'rgba(70,52,36,0.85)'; c.stroke(p)
+        // wie eine gestanzte Mulde: heller Grund, dunkler Umriss, innen ein heller Rand
+        c.fillStyle = 'rgba(232,222,206,0.82)'; c.fill(p)
+        c.lineJoin = 'round'
+        c.save(); c.clip(p)
+        c.lineWidth = 0.09; c.strokeStyle = 'rgba(90,66,44,0.35)'; c.translate(0.02, 0.025); c.stroke(p)
+        c.restore()
+        c.lineWidth = 0.05; c.strokeStyle = 'rgba(60,42,26,0.95)'; c.stroke(p)
       } else { c.fillStyle = '#fff'; c.fill(p) }
       const t = canvasTex(m, false)
       t.channel = 1
@@ -88,6 +114,30 @@ function buildPieces(sf: Surface, seed: number, aniso: number): Piece[] {
       return t
     }
     const mask = draw(false), ghostTex = draw(true)
+
+    // eigenes Bild für dieses Teil: Ausschnitt aus dem Motiv plus geprägte Kante wie bei 2D
+    const regW = ((u1 - u0) / cols) * sf.tw, regH = ((v1 - v0) / rows) * sf.th
+    const cap = many ? 256 : 512
+    const TW = Math.max(64, Math.min(cap, Math.round(regW))), TH = Math.max(64, Math.min(cap, Math.round(regH)))
+    const pc = document.createElement('canvas'); pc.width = TW; pc.height = TH
+    const g2 = pc.getContext('2d')!
+    g2.imageSmoothingQuality = 'high'
+    const sx = TW / regW, sy = TH / regH, X0 = ((col + u0) / cols) * sf.tw, Y0 = ((row + v0) / rows) * sf.th
+    for (const off of wrap ? [-sf.tw, 0, sf.tw] : [0]) g2.drawImage(cv, (off - X0) * sx, -Y0 * sy, sf.tw * sx, sf.th * sy)
+    g2.setTransform(TW / (u1 - u0), 0, 0, TH / (v1 - v0), (-u0 * TW) / (u1 - u0), (-v0 * TH) / (v1 - v0))
+    g2.save(); g2.clip(p); g2.lineJoin = 'round'
+    const bevel = (o: number, w: number, dark: string, light: string) => {
+      g2.lineWidth = w
+      g2.save(); g2.translate(-o, -o); g2.strokeStyle = dark; g2.stroke(p); g2.restore()
+      g2.save(); g2.translate(o, o); g2.strokeStyle = light; g2.stroke(p); g2.restore()
+    }
+    bevel(0.035, 0.09, 'rgba(0,0,0,0.20)', 'rgba(255,255,255,0.28)')
+    bevel(0.018, 0.045, 'rgba(0,0,0,0.32)', 'rgba(255,255,255,0.55)')
+    g2.restore()
+    g2.lineWidth = 0.018; g2.strokeStyle = 'rgba(30,20,12,0.6)'; g2.stroke(p)
+    const map = canvasTex(pc, true)
+    map.channel = 1
+    map.anisotropy = aniso
 
     const nu = Math.round(RES * (u1 - u0)), nv = Math.round(RES * (v1 - v0))
     const P: THREE.Vector3[] = [], N: THREE.Vector3[] = [], uv: number[] = [], uv1: number[] = []
@@ -118,7 +168,7 @@ function buildPieces(sf: Surface, seed: number, aniso: number): Piece[] {
     }
     const gOuter = layer(0, false), gMid = layer(sf.thick * 0.5, false), gInner = layer(sf.thick, true)
     const printMat = new THREE.MeshStandardMaterial({ map, alphaMap: mask, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.42, metalness: 0.02 })
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe7e1d6, alphaMap: mask, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.7, side: THREE.DoubleSide })
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xcbb898, alphaMap: mask, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.7, side: THREE.DoubleSide })
     const solid = new THREE.Group()
     solid.add(new THREE.Mesh(gOuter, printMat), new THREE.Mesh(gMid, bodyMat), new THREE.Mesh(gInner, bodyMat))
     solid.visible = false
@@ -128,7 +178,7 @@ function buildPieces(sf: Surface, seed: number, aniso: number): Piece[] {
     const center = sf.fn(Uc, Vc)
     let radius = 0
     for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) radius = Math.max(radius, center.distanceTo(sf.fn(wrap ? (((col + a) / cols) % 1) : (col + a) / cols, (row + b) / rows)))
-    out.push({ solid, ghost, center, normal: normalAt(Uc, Vc).multiplyScalar(sign), radius, disposables: [gOuter, gMid, gInner, mask, ghostTex, printMat, bodyMat, ghost.material as THREE.Material, ...(col === 0 && row === 0 ? [map] : [])] })
+    out.push({ solid, ghost, center, normal: normalAt(Uc, Vc).multiplyScalar(sign), radius, disposables: [gOuter, gMid, gInner, mask, ghostTex, map, printMat, bodyMat, ghost.material as THREE.Material] })
   }
   return out
 }

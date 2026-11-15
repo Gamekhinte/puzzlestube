@@ -96,9 +96,19 @@ export const SIZES: { count: number; n: number; level: string }[] = [
   { count: 576, n: 24, level: 'Sehr schwer' },
   { count: 1000, n: 0, level: 'Für Könner' },
 ]
-/** Raster zu einer Teilezahl. 1000 Teile: 40 × 25 im Querformat, 25 × 40 im Hochformat. */
-export function grid(count: number, landscape: boolean): [number, number] {
-  if (count === 1000) return landscape ? [40, 25] : [25, 40]
-  const n = Math.round(Math.sqrt(count))
-  return [n, n]
+/** Raster zu einer Teilezahl, passend zum Bildformat (Breite durch Höhe), damit die Teile
+ *  ungefähr quadratisch werden und nicht in die Länge gezogen. Die Teilezahl ist danach ungefähr
+ *  die gewünschte (z. B. 35 statt 36), angezeigt wird immer die echte. */
+export function grid(count: number, aspect: number): [number, number] {
+  const a = Math.min(4, Math.max(0.25, aspect || 1))
+  let best: [number, number] = [1, count], score = Infinity
+  for (let cols = 2; cols <= count; cols++) {
+    const rows = Math.max(2, Math.round(count / cols))
+    // Abweichung der Teileform von quadratisch plus Abweichung von der Wunschzahl
+    const shape = Math.abs(Math.log((a / cols) * rows))
+    const off = Math.abs(cols * rows - count) / count
+    const sc = shape + off * 3
+    if (sc < score) { score = sc; best = [cols, rows] }
+  }
+  return best
 }
