@@ -47,6 +47,8 @@ interface Piece {
   normal: THREE.Vector3
   radius: number
   disposables: { dispose: () => void }[]
+  /** flaches Bild des Teils (mit geprägtem Rand) für die Leiste, ohne 3D-Rendern */
+  flat: { tex: HTMLCanvasElement; path: Path2D; u0: number; u1: number; v0: number; v1: number; aspect: number }
 }
 
 function canvasTex(cv: HTMLCanvasElement, color: boolean) {
@@ -127,7 +129,7 @@ function bevelNormals(p: Path2D, u0: number, u1: number, v0: number, v1: number,
 }
 
 /** Baut aus einer Oberfläche die einzelnen Puzzleteile. */
-function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
+async function buildPieces(sf0: Surface, seed: number, aniso: number): Promise<Piece[]> {
   const sf = fitGrid(sf0)
   const { cols, rows, wrap } = sf
   const cv = document.createElement('canvas')
@@ -149,9 +151,12 @@ function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
 
   // bei vielen Teilen kleinere Masken und gröberes Netz, damit es auf Handy und iPad flüssig bleibt
   const many = cols * rows > 60
-  const S = many ? 112 : 192, RES = many ? 9 : 14
+  const S = many ? 96 : 192, RES = many ? 9 : 14
   const out: Piece[] = []
+  let made = 0
   for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) {
+    // alle paar Teile kurz Luft holen, damit die Seite nicht einfriert
+    if (++made % 8 === 0) await new Promise((r) => setTimeout(r, 0))
     const left = wrap || col > 0, right = wrap || col < cols - 1
     const p = new Path2D()
     p.moveTo(0, 0)
@@ -182,11 +187,11 @@ function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
       return t
     }
     const mask = draw(false), ghostTex = draw(true)
-    const normals = bevelNormals(p, u0, u1, v0, v1, many ? 96 : 176)
+    const normals = bevelNormals(p, u0, u1, v0, v1, many ? 64 : 176)
 
     // eigenes Bild für dieses Teil: Ausschnitt aus dem Motiv plus geprägte Kante wie bei 2D
     const regW = ((u1 - u0) / cols) * sf.tw, regH = ((v1 - v0) / rows) * sf.th
-    const cap = many ? 256 : 512
+    const cap = many ? 160 : 512
     const TW = Math.max(64, Math.min(cap, Math.round(regW))), TH = Math.max(64, Math.min(cap, Math.round(regH)))
     const pc = document.createElement('canvas'); pc.width = TW; pc.height = TH
     const g2 = pc.getContext('2d')!
@@ -247,10 +252,15 @@ function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
     const ghost = new THREE.Mesh(gOuter, new THREE.MeshBasicMaterial({ map: ghostTex, transparent: true, depthWrite: false, side: THREE.DoubleSide }))
 
     const Uc = (col + 0.5) / cols, Vc = (row + 0.5) / rows
+    // echtes Seitenverhältnis des Teils auf dem Modell (für das Bild in der Leiste)
+    const wrapU = (u: number) => (wrap ? ((u % 1) + 1) % 1 : Math.min(1, Math.max(0, u)))
+    const wP = sf.fn(wrapU(Uc - 0.5 / cols), Vc).distanceTo(sf.fn(wrapU(Uc + 0.5 / cols), Vc))
+    const hP = sf.fn(Uc, Math.max(0, Vc - 0.5 / rows)).distanceTo(sf.fn(Uc, Math.min(1, Vc + 0.5 / rows)))
+    const physAspect = (wP * (u1 - u0)) / Math.max(1e-6, hP * (v1 - v0))
     const center = sf.fn(Uc, Vc)
     let radius = 0
     for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) radius = Math.max(radius, center.distanceTo(sf.fn(wrap ? (((col + a) / cols) % 1) : (col + a) / cols, (row + b) / rows)))
-    out.push({ solid, ghost, center, normal: normalAt(Uc, Vc).multiplyScalar(sign), radius, disposables: [gOuter, ...mids, gInner, mask, ghostTex, map, normals, printMat, bodyMat, ghost.material as THREE.Material] })
+    out.push({ solid, ghost, center, normal: normalAt(Uc, Vc).multiplyScalar(sign), radius, disposables: [gOuter, ...mids, gInner, mask, ghostTex, map, normals, printMat, bodyMat, ghost.material as THREE.Material], flat: { tex: pc, path: p, u0, u1, v0, v1, aspect: physAspect } })
   }
   return out
 }
@@ -267,6 +277,7 @@ function groundShadow(radius: number, y: number) {
 }
 
 export type PlaceResult = 'ok' | 'wrong' | 'miss'
+export interface ThumbSheet { canvas: HTMLCanvasElement; cols: number; rows: number; size: number }
 
 export class Stage3D {
   private renderer: THREE.WebGLRenderer
@@ -294,14 +305,20 @@ export class Stage3D {
   private ray = new THREE.Raycaster()
   onTap: (x: number, y: number) => void = () => {}
 
-  constructor(private canvas: HTMLCanvasElement, built: Built, seed = 7) {
+  /** Baut die Teile in Häppchen (die Seite bleibt bedienbar) und erstellt dann die Bühne. */
+  static async create(canvas: HTMLCanvasElement, built: Built, seed = 7): Promise<Stage3D> {
+    const pieces: Piece[] = []
+    for (const [n, s] of built.surfaces.entries()) pieces.push(...(await buildPieces(s, seed + n * 101, 16)))
+    return new Stage3D(canvas, built, pieces)
+  }
+
+  private constructor(private canvas: HTMLCanvasElement, built: Built, pieces: Piece[]) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
     this.renderer.setClearColor(0x000000, 0)
     lights(this.scene, this.camera)
     look(this.renderer, this.scene)
     this.scene.add(this.root)
-    const aniso = this.renderer.capabilities.getMaxAnisotropy()
-    built.surfaces.forEach((s, n) => this.pieces.push(...buildPieces(s, seed + n * 101, aniso)))
+    this.pieces = pieces
     this.filled = this.pieces.map(() => null)
     for (const s of built.statics) this.root.add(s)
     for (const p of this.pieces) this.root.add(p.ghost, p.solid)
@@ -323,6 +340,27 @@ export class Stage3D {
     canvas.addEventListener('pointerup', this.onUp)
     canvas.addEventListener('pointercancel', this.onUp)
     canvas.addEventListener('wheel', this.onWheel, { passive: false })
+    this.warmup()
+  }
+
+  /** Lädt Shader und Texturen der Teile im Hintergrund vor (ein paar pro Durchgang),
+   *  damit das erste Einsetzen nicht hakt. */
+  private warmup() {
+    const first = this.pieces[0]
+    if (!first) return
+    first.solid.visible = true
+    try { this.renderer.compile(this.scene, this.camera) } catch { /* egal */ }
+    first.solid.visible = this.filled[0] !== null
+    let i = 0
+    const step = () => {
+      if (this.dead) return
+      const end = Math.min(this.pieces.length, i + 6)
+      for (; i < end; i++) {
+        for (const d of this.pieces[i].disposables) if (d instanceof THREE.Texture) this.renderer.initTexture(d)
+      }
+      if (i < this.pieces.length) setTimeout(step, 16)
+    }
+    setTimeout(step, 300)
   }
 
   get count() { return this.pieces.length }
@@ -343,30 +381,27 @@ export class Stage3D {
     this.renderer.dispose()
   }
 
-  /** Vorschaubild für jedes Teil, gerade von vorn auf die bedruckte Seite. */
-  thumbs(size = 200): string[] {
-    const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50)
-    look(this.renderer, scene)
-    lights(scene, cam)
-    this.renderer.setPixelRatio(1)
-    this.renderer.setSize(size, size, false)
-    const out = this.pieces.map((p) => {
-      const was = p.solid.visible, parent = p.solid.parent
-      p.solid.visible = true
-      scene.add(p.solid)
-      const dir = p.normal.clone().add(new THREE.Vector3(0, 0.18, 0)).normalize()
-      cam.position.copy(p.center).addScaledVector(dir, (p.radius * 1.12) / Math.tan(THREE.MathUtils.degToRad(15)))
-      cam.up.set(0, 1, 0)
-      if (Math.abs(dir.y) > 0.9) cam.up.set(0, 0, -1)
-      cam.lookAt(p.center)
-      this.renderer.render(scene, cam)
-      const url = this.canvas.toDataURL('image/png')
-      parent?.add(p.solid)
-      p.solid.visible = was
-      return url
+  /** Vorschaubilder aller Teile auf EINEM Bogen (wie Briefmarken). Gezeichnet mit dem flachen Bild
+   *  jedes Teils (es hat den geprägten Rand schon), also ohne 3D-Rendern: dauert nur Millisekunden. */
+  thumbs(size = 200): ThumbSheet {
+    const n = this.pieces.length, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols)
+    const cv = document.createElement('canvas'); cv.width = cols * size; cv.height = rows * size
+    const c = cv.getContext('2d')!
+    c.imageSmoothingQuality = 'high'
+    this.pieces.forEach((p, i) => {
+      const f = p.flat, k = 0.96
+      const w = f.aspect >= 1 ? size * k : size * k * f.aspect, h = f.aspect >= 1 ? (size * k) / f.aspect : size * k
+      const x = (i % cols) * size + (size - w) / 2, y = Math.floor(i / cols) * size + (size - h) / 2
+      c.save()
+      c.translate(x, y); c.scale(w / (f.u1 - f.u0), h / (f.v1 - f.v0)); c.translate(-f.u0, -f.v0)
+      // Pappkante unten und weicher Schatten
+      c.save(); c.translate(0, 0.05); c.shadowColor = 'rgba(40,24,10,0.35)'; c.shadowBlur = size * 0.05; c.shadowOffsetY = size * 0.02
+      c.fillStyle = '#a68559'; c.fill(f.path); c.restore()
+      c.save(); c.clip(f.path); c.drawImage(f.tex, f.u0, f.v0, f.u1 - f.u0, f.v1 - f.v0); c.restore()
+      c.restore()
     })
-    this.resize()
-    return out
+    // kein Speichern als Bilddatei (auf dem iPhone über eine Sekunde): die Leiste zeichnet direkt von hier ab
+    return { canvas: cv, cols, rows, size }
   }
 
   private resize() {
@@ -536,24 +571,48 @@ function surfaceMesh(sf: Surface): { mesh: THREE.Mesh; dispose: () => void } {
 let cache: Record<string, string> = {}
 let running = false
 const listeners = new Set<(r: Record<string, string>) => void>()
-/** Vorschaubilder der Modelle. Gibt sofort zurück, was schon fertig ist, und rendert den Rest
- *  nach und nach im Hintergrund (ein Modell pro Durchgang), damit nichts einfriert. */
+// Fertige Vorschaubilder werden auf dem Gerät gemerkt (Cache-Speicher des Browsers).
+// Bei Änderungen an den Modellen oder am Licht diese Version hochzählen.
+const THUMB_STORE = 'puzzlestube-3d-vorschau-v2'
+const thumbKey = (id: string) => `vorschau/${id}.webp`
+function emit() { const r = { ...cache }; for (const l of listeners) l(r) }
+
+/** Vorschaubilder der Modelle. Gibt sofort zurück, was schon da ist. Zuerst wird der Gerätespeicher
+ *  gelesen, nur was fehlt, wird im Hintergrund gerendert (ein Modell pro Durchgang) und gemerkt. */
 export function modelThumbs(onUpdate?: (r: Record<string, string>) => void): Record<string, string> {
   if (onUpdate) listeners.add(onUpdate)
   if (running || MODELS.every((m) => cache[m.id])) return { ...cache }
   running = true
+  void (async () => {
+    let store: Cache | null = null
+    try { store = await caches.open(THUMB_STORE) } catch { /* ohne Cache-Speicher einfach rendern */ }
+    if (store) {
+      await Promise.all(MODELS.map(async (m) => {
+        if (cache[m.id]) return
+        const hit = await store!.match(thumbKey(m.id))
+        if (hit) cache[m.id] = URL.createObjectURL(await hit.blob())
+      }))
+      emit()
+    }
+    renderMissing(store)
+  })()
+  return { ...cache }
+}
+
+function renderMissing(store: Cache | null) {
+  const todo = MODELS.filter((m) => !cache[m.id])
+  if (!todo.length) { running = false; return }
   let renderer: THREE.WebGLRenderer
   try {
     renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas'), antialias: true, alpha: true })
-  } catch { running = false; return { ...cache } } // ohne WebGL gibt es keine Vorschau
+  } catch { running = false; return } // ohne WebGL gibt es keine Vorschau
   renderer.setPixelRatio(1); renderer.setSize(480, 360, false)
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, 4 / 3, 0.1, 100)
   lights(scene, cam)
   look(renderer, scene)
-  const todo = MODELS.filter((m) => !cache[m.id])
-  const step = () => {
+  const step = async () => {
     const m = todo.shift()
-    if (!m) { renderer.dispose(); renderer.forceContextLoss(); running = false; listeners.clear(); return }
+    if (!m) { renderer.dispose(); renderer.forceContextLoss(); running = false; return }
     try {
       const g = new THREE.Group(), built = m.build(24), parts = built.surfaces.map(surfaceMesh)
       for (const p of parts) g.add(p.mesh)
@@ -563,13 +622,16 @@ export function modelThumbs(onUpdate?: (r: Record<string, string>) => void): Rec
       cam.position.copy(s.center).addScaledVector(new THREE.Vector3(0.5, 0.36, 0.78).normalize(), (s.radius / Math.sin(THREE.MathUtils.degToRad(16))) * 0.9)
       cam.lookAt(s.center)
       renderer.render(scene, cam)
-      cache = { ...cache, [m.id]: renderer.domElement.toDataURL('image/png') }
+      const blob = await new Promise<Blob | null>((ok) => renderer.domElement.toBlob(ok, 'image/webp', 0.86))
       scene.remove(g)
       for (const p of parts) p.dispose()
-      for (const l of listeners) l(cache)
+      if (blob) {
+        cache = { ...cache, [m.id]: URL.createObjectURL(blob) }
+        if (store) void store.put(thumbKey(m.id), new Response(blob, { headers: { 'Content-Type': 'image/webp' } })).catch(() => {})
+        emit()
+      }
     } catch { /* dieses Modell ohne Vorschau */ }
-    setTimeout(step, 0)
+    setTimeout(() => void step(), 0)
   }
-  setTimeout(step, 0)
-  return { ...cache }
+  setTimeout(() => void step(), 0)
 }

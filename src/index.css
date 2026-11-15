@@ -134,3 +134,6 @@ body {
 /* Scrollbalken ausblenden, wischen geht weiter */
 .ohne-leiste { scrollbar-width: none; }
 .ohne-leiste::-webkit-scrollbar { display: none; }
+
+/* Themenreihen außerhalb des Bildschirms nicht zeichnen, das macht das Scrollen leichter */
+.thema { content-visibility: auto; contain-intrinsic-size: auto 300px; }

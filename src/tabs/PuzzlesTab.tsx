@@ -156,7 +156,7 @@ export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => 
         const items = GALLERY.filter((g) => g.category === cat)
         const isOpen = open === cat
         return (
-          <section key={cat} id={`thema-${cat}`} className="mb-7 scroll-mt-4">
+          <section key={cat} id={`thema-${cat}`} className="thema mb-7 scroll-mt-4">
             <div className="mb-3 flex items-center gap-3">
               <h2 className="h2 min-w-0 flex-1 truncate">{cat}</h2>
               <button className="min-h-[44px] px-1 text-[17px] font-semibold text-green underline decoration-green/40 underline-offset-4" onClick={() => setOpen(isOpen ? null : cat)} aria-expanded={isOpen}>

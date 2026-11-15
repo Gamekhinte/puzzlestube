@@ -1,12 +1,12 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { PuzzlesTab } from './tabs/PuzzlesTab'
-import { PuzzleScreen } from './puzzle/PuzzleScreen'
 import { PieceCountModal } from './ui/PieceCountModal'
 import { Icon, Loading } from './ui/common'
 
 // Der 3D-Teil (three.js) ist groß. Er wird erst geladen, wenn man ihn braucht, damit die App schnell startet.
 const ThreeDTab = lazy(() => import('./tabs/ThreeDTab').then((m) => ({ default: m.ThreeDTab })))
 const CollectionTab = lazy(() => import('./tabs/CollectionTab').then((m) => ({ default: m.CollectionTab })))
+const PuzzleScreen = lazy(() => import('./puzzle/PuzzleScreen').then((m) => ({ default: m.PuzzleScreen })))
 const Puzzle3D = lazy(() => import('./three/Puzzle3D').then((m) => ({ default: m.Puzzle3D })))
 
 type Tab = 'puzzles' | '3d' | 'sammlung'
@@ -34,7 +34,7 @@ export default function App() {
   const start = (p: Play) => { setPick(null); history.pushState({ spiel: true }, ''); setPlay(p) }
   const exit = (to?: 'sammlung') => { if (to) setTab(to); history.back() }
 
-  if (play?.kind === '2d') return <PuzzleScreen imageId={play.imageId} cols={play.cols} rows={play.rows} onExit={exit} />
+  if (play?.kind === '2d') return <Suspense fallback={<div className="tisch fixed inset-0"><Loading text="Dein Puzzle wird vorbereitet" /></div>}><PuzzleScreen imageId={play.imageId} cols={play.cols} rows={play.rows} onExit={exit} /></Suspense>
   if (play?.kind === '3d') return <Suspense fallback={<div className="tisch fixed inset-0"><Loading text="Dein 3D-Puzzle wird vorbereitet" /></div>}><Puzzle3D modelId={play.model} count={play.count} onExit={exit} /></Suspense>
 
   return (

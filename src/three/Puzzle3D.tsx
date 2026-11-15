@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Stage3D } from './stage'
+import { Stage3D, type ThumbSheet } from './stage'
 import { MODELS } from './models'
 import { type Game3D, get, put } from '../db'
 import { rng } from '../puzzle/engine'
@@ -13,7 +13,11 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
   const stageRef = useRef<Stage3D | null>(null)
   const selRef = useRef<number | null>(null)
   const placeRef = useRef<(piece: number, x: number, y: number) => void>(() => {})
-  const [thumbs, setThumbs] = useState<string[]>([])
+  const [sheet, setSheet] = useState<ThumbSheet | null>(null)
+  // Bildgröße in der Leiste: im flachen Querformat kleiner (passt zu .teil3d in index.css)
+  const flachQuery = '(orientation: landscape) and (max-height: 520px)'
+  const [teilPx, setTeilPx] = useState(() => (window.matchMedia(flachQuery).matches ? 58 : 80))
+  useEffect(() => { const mq = window.matchMedia(flachQuery); const on = () => setTeilPx(mq.matches ? 58 : 80); mq.addEventListener('change', on); return () => mq.removeEventListener('change', on) }, [])
   const [tray, setTray] = useState<number[]>([])
   const [sel, setSel] = useState<number | null>(null)
   const [msg, setMsg] = useState('')
@@ -41,10 +45,11 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
         freshRef.current = false
         await new Promise((r) => setTimeout(r, 40))
         if (dead || !canvasRef.current) return
-        stage = new Stage3D(canvasRef.current, model.build(count))
+        stage = await Stage3D.create(canvasRef.current, model.build(count))
+        if (dead) { stage.dispose(); stage = null; return }
         const n = stage.count
         stageRef.current = stage
-        setThumbs(stage.thumbs(n > 60 ? 128 : 200))
+        setSheet(stage.thumbs(n > 60 ? 112 : 180))
         const placed = old && !old.done ? old.placed : []
         for (let i = 0; i + 1 < placed.length; i += 2) if (placed[i] < n && placed[i] === placed[i + 1]) stage.fill(placed[i], placed[i], false)
         const used = new Set(stage.slots.filter((s): s is number => s !== null))
@@ -163,7 +168,7 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
             {tray.map((p) => (
               <button key={p} onPointerDown={(e) => startDrag(p, e)} aria-label={`Teil ${p + 1}`} aria-pressed={sel === p}
                 className={`teil3d flex flex-none items-center justify-center rounded-xl border-[3px] bg-white/60 transition-colors ${sel === p ? 'border-green bg-white' : 'border-transparent'}`} style={{ touchAction: 'pan-x' }}>
-                {thumbs[p] && <img src={thumbs[p]} alt="" className="pointer-events-none h-[86%] w-[86%]" draggable={false} />}
+                {sheet && <Teilbild sheet={sheet} i={p} px={teilPx} />}
               </button>
             ))}
             
@@ -171,8 +176,8 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
         </div>
       )}
 
-      {drag && thumbs[drag.piece] && (
-        <img src={thumbs[drag.piece]} alt="" className="pointer-events-none fixed z-50 h-[120px] w-[120px]" style={{ left: drag.x - 60, top: drag.y - 96 }} />
+      {drag && sheet && (
+        <div className="pointer-events-none fixed z-50" style={{ left: drag.x - 60, top: drag.y - 96 }}><Teilbild sheet={sheet} i={drag.piece} px={120} /></div>
       )}
       {ask && (
         <Confirm title="Neu beginnen?" text="Alle Teile kommen zurück in die Leiste." yes="Ja, neu beginnen" onNo={() => setAsk(false)}
@@ -180,4 +185,19 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
       )}
     </div>
   )
+}
+
+/** Bild eines Teils, direkt vom Bogen abgezeichnet (ohne Umweg über eine Bilddatei). */
+function Teilbild({ sheet, i, px }: { sheet: ThumbSheet; i: number; px: number }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const cv = ref.current
+    if (!cv) return
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    cv.width = Math.round(px * dpr); cv.height = Math.round(px * dpr)
+    const c = cv.getContext('2d')!
+    c.imageSmoothingQuality = 'high'
+    c.drawImage(sheet.canvas, (i % sheet.cols) * sheet.size, Math.floor(i / sheet.cols) * sheet.size, sheet.size, sheet.size, 0, 0, cv.width, cv.height)
+  }, [sheet, i, px])
+  return <canvas ref={ref} className="teilbild pointer-events-none block" style={{ width: px, height: px }} />
 }
