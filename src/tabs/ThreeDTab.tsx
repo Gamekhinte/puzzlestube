@@ -48,8 +48,8 @@ export function ThreeDTab({ onPlay }: { onPlay: (model: string, count: number) =
                     {thumbs[m.id] && <img src={thumbs[m.id]} alt="" className="bild h-full w-full object-contain" draggable={false} onLoad={(e) => e.currentTarget.classList.add('da')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('da') }} />}
                   </div>
                   <div className="px-3 py-2.5">
-                    <div className="text-[20px] font-semibold leading-tight">{m.name}</div>
-                    <div className="text-[18px] text-ink2">{pct !== undefined ? `${pct}% fertig, weiterbauen` : m.text}</div>
+                    <div className="text-[19px] font-bold leading-tight">{m.name}</div>
+                    {pct !== undefined && <div className="text-[16px] font-semibold text-green">{pct}%</div>}
                   </div>
                 </button>
               )

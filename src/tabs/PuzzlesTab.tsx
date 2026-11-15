@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { CATEGORIES, GALLERY, galleryThumb } from '../gallery'
-import { type Album, type Photo, addCanvasPhoto, addPhotos, all, deleteAlbum, deletePhoto, keepStorage, put, uid } from '../db'
+import { type Album, type Game, type Photo, addCanvasPhoto, addPhotos, all, deleteAlbum, deletePhoto, keepStorage, put, uid } from '../db'
 import { DOP, SAT_CREDIT, SatelliteModal } from './SatelliteModal'
-import { Confirm, Icon, Loading, Logo, Modal } from '../ui/common'
+import { Bar, Confirm, Icon, Loading, Logo, Modal } from '../ui/common'
 
-export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
+export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => void; onResume: (g: Game) => void }) {
   const [credits, setCredits] = useState(false)
   const [sat, setSat] = useState(false)
   const [albums, setAlbums] = useState<Album[]>([])
@@ -13,6 +13,7 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
   const [note, setNote] = useState('')
   const [edit, setEdit] = useState<string | null>(null)
   const [ask, setAsk] = useState<{ title: string; text: string; run: () => Promise<void> } | null>(null)
+  const [last, setLast] = useState<Game | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
   const reload = async () => {
@@ -20,7 +21,11 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
     setAlbums(a.sort((x, y) => y.createdAt - x.createdAt))
     setPhotos(p.sort((x, y) => x.createdAt - y.createdAt))
   }
-  useEffect(() => { void reload() }, [])
+  useEffect(() => {
+    void reload()
+    // zuletzt angefangenes Puzzle für die Karte "Weiterpuzzeln"
+    void all<Game>('games').then((gs) => setLast(gs.filter((g) => !g.done && g.state && g.percent < 100).sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null))
+  }, [])
 
   const upload = async (files: FileList | null) => {
     if (!files || !files.length) return
@@ -59,11 +64,11 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-5">
-      <header className="mb-5 flex items-center gap-3">
-        <Logo size={52} />
+      <header className="mb-5 flex items-center gap-4">
+        <Logo size={64} />
         <div>
-          <h1 className="h1">Puzzlestube</h1>
-          <div className="text-[18px] text-ink2">von screame</div>
+          <h1 className="text-[32px] font-extrabold leading-none tracking-tight">Puzzlestube</h1>
+          <div className="mt-1 text-[17px] text-ink2">von screame</div>
         </div>
       </header>
 
@@ -77,6 +82,34 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
       </div>
       <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(e) => void upload(e.target.files)} />
       {note && <p className="card mb-6 border-danger p-4 text-[20px] text-danger" role="alert">{note}</p>}
+
+      {last && (
+        <button className="kachel card mb-7 flex w-full items-center gap-4 overflow-hidden p-3 text-left" onClick={() => onResume(last)}>
+          <img src={last.thumb} alt="" className="h-[84px] w-[112px] flex-none rounded-lg object-cover" draggable={false} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-semibold uppercase tracking-wide text-green">Weiterpuzzeln</div>
+            <div className="truncate text-[20px] font-bold leading-tight">{last.title}</div>
+            <div className="mb-1.5 text-[16px] text-ink2">{last.cols * last.rows} Teile · {last.percent}%</div>
+            <Bar percent={last.percent} />
+          </div>
+          <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-green text-white"><Icon name="next" size={26} /></span>
+        </button>
+      )}
+
+      <nav className="mb-8" aria-label="Themen">
+        <h2 className="h2 mb-3">Themen</h2>
+        <div className="ohne-leiste -mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2">
+          {CATEGORIES.map((cat) => {
+            const first = GALLERY.find((g) => g.category === cat)
+            return (
+              <button key={cat} className="kachel card w-[128px] flex-none snap-start overflow-hidden p-0 text-left" onClick={() => document.getElementById(`thema-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                <div className="aspect-square w-full bg-wood-dark">{first && <img src={galleryThumb(first)} alt="" className="bild h-full w-full object-cover" loading="lazy" draggable={false} onLoad={(e) => e.currentTarget.classList.add('da')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('da') }} />}</div>
+                <div className="px-2.5 py-2 text-[16px] font-semibold leading-tight">{cat}</div>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
 
       {albums.map((a) => {
         const ps = photos.filter((p) => p.albumId === a.id)
@@ -113,19 +146,9 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
         )
       })}
 
-      <nav className="mb-8" aria-label="Themen">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {CATEGORIES.map((cat) => (
-            <button key={cat} className="btn !min-h-[54px] !px-3 !text-[18px] leading-tight" onClick={() => document.getElementById(`thema-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-              {cat}
-            </button>
-          ))}
-        </div>
-      </nav>
-
       {CATEGORIES.map((cat) => (
         <section key={cat} id={`thema-${cat}`} className="mb-8 scroll-mt-4">
-          <h2 className="h2 mb-3">{cat}</h2>
+          <h2 className="h2 mb-3 flex items-baseline gap-2">{cat}<span className="text-[16px] font-normal text-ink2">{GALLERY.filter((g) => g.category === cat).length}</span></h2>
           <Grid>
             {GALLERY.filter((g) => g.category === cat).map((g) => <Tile key={g.id} src={galleryThumb(g)} title={g.title} onClick={() => onPick(g.id)} />)}
           </Grid>

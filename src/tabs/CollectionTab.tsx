@@ -47,7 +47,7 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
 
       {empty && (
         <div className="card p-6 text-center">
-          <p className="mb-4 text-[21px]">Hier erscheinen deine angefangenen und fertigen Puzzles und deine Fotoalben.</p>
+          <p className="mb-4 text-[20px]">Noch nichts angefangen.</p>
           <button className="btn btn-primary" onClick={goPuzzles}>Erstes Puzzle aussuchen</button>
         </div>
       )}
@@ -58,13 +58,12 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
           <div className="grid gap-4 md:grid-cols-2">
             {running.map((g) => (
               <div key={g.id} className="card flex items-stretch gap-3 overflow-hidden p-0">
-                <button className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left" onClick={() => onResume(g)}>
+                <button className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left active:bg-black/5" onClick={() => onResume(g)}>
                   <img src={g.thumb} alt="" className="h-24 w-28 flex-none rounded-lg border border-black/15 object-cover" draggable={false} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[20px] font-semibold">{g.title}</div>
-                    <div className="mb-1.5 text-[18px] text-ink2">{g.cols * g.rows} Teile, {g.percent}% fertig</div>
+                    <div className="truncate text-[19px] font-bold">{g.title}</div>
+                    <div className="mb-1.5 text-[16px] text-ink2">{g.cols * g.rows} Teile · {g.percent}%</div>
                     <Bar percent={g.percent} />
-                    <div className="mt-1.5 text-[18px] font-semibold text-green">Weiterpuzzeln</div>
                   </div>
                 </button>
                 <button className="flex w-14 flex-none items-center justify-center border-l border-black/10 text-ink2" aria-label={`${g.title} löschen`}
@@ -76,13 +75,12 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
             {running3.map((g) => {
               const pct = Math.round((g.placed.length / 2 / g.count) * 100)
               return (
-                <button key={g.id} className="card flex items-center gap-3 p-3 text-left" onClick={() => onResume3D(g.model, g.count)}>
+                <button key={g.id} className="kachel card flex items-center gap-3 p-3 text-left" onClick={() => onResume3D(g.model, g.count)}>
                   <div className="h-24 w-28 flex-none rounded-lg border border-black/15 bg-wood">{m3[g.model] && <img src={m3[g.model]} alt="" className="h-full w-full object-contain" draggable={false} />}</div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[20px] font-semibold">{name3(g.model)} (3D)</div>
-                    <div className="mb-1.5 text-[18px] text-ink2">{g.count} Teile, {pct}% fertig</div>
+                    <div className="truncate text-[19px] font-bold">{name3(g.model)} (3D)</div>
+                    <div className="mb-1.5 text-[16px] text-ink2">{g.count} Teile · {pct}%</div>
                     <Bar percent={pct} />
-                    <div className="mt-1.5 text-[18px] font-semibold text-green">Weiterbauen</div>
                   </div>
                 </button>
               )
@@ -104,7 +102,7 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
                 <div className="aspect-[4/3] w-full bg-wood">{m3[g.model] && <img src={m3[g.model]} alt="" className="h-full w-full object-contain" draggable={false} />}</div>
                 <span className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-lg bg-white text-gold"><Icon name="trophy" /></span>
                 <div className="px-3 py-2.5">
-                  <div className="truncate text-[20px] font-semibold">{name3(g.model)} (3D)</div>
+                  <div className="truncate text-[19px] font-bold">{name3(g.model)} (3D)</div>
                   <div className="text-[18px] text-ink2">{g.count} Teile geschafft</div>
                 </div>
               </button>

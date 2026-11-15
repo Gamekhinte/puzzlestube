@@ -22,5 +22,12 @@ document.addEventListener('dblclick', (e) => e.preventDefault())
 document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && e.cancelable) e.preventDefault() }, { passive: false })
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => { void navigator.serviceWorker.register('sw.js') })
+  window.addEventListener('load', () => { void navigator.serviceWorker.register('sw.js').then((r) => r.update()).catch(() => {}) })
+  // Nach einem Update übernimmt der neue Service Worker: einmal neu laden, damit alles zusammenpasst.
+  let reloaded = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded || !navigator.serviceWorker.controller) return
+    reloaded = true
+    location.reload()
+  })
 }

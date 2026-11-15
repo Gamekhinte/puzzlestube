@@ -27,11 +27,22 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
+  // Die Seite selbst immer zuerst frisch aus dem Netz holen. Sonst zeigt das Handy nach einem
+  // Update die alte Seite, die auf gelöschte Programmdateien zeigt, und bleibt beim Logo hängen.
+  const page = e.request.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
+  if (page) {
+    e.respondWith(fetch(e.request).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('./', copy)); }
+      return res;
+    }).catch(() => caches.match('./')));
+    return;
+  }
+  // Alles andere (Programm, Bilder): erst aus dem Speicher, sonst aus dem Netz und merken.
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request).then((res) => {
-      if (res.ok && url.pathname.includes('/galerie/')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
       return res;
-    }).catch(() => caches.match('./')))
+    }))
   );
 });
 `
