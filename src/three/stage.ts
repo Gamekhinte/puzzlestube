@@ -2,6 +2,7 @@
 // Nasen geschnitten. Freie Plätze sind als helle Umrisse zu sehen, ein Teil
 // rastet ein, wenn man es auf seinen Platz legt. Dafür muss der Platz vorne sein.
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { type Edge, edgeTo, makeEdge, rng } from '../puzzle/engine'
 import { type Built, MODELS, type Surface } from './models'
 
@@ -9,14 +10,34 @@ const HINT = 0xffc94d
 const MARGIN = 0.42
 
 function lights(scene: THREE.Scene, camera: THREE.Camera) {
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xa08a6c, 1.35))
-  const d = new THREE.DirectionalLight(0xffffff, 2.1)
-  d.position.set(1.6, 2.6, 3)
+  scene.add(new THREE.HemisphereLight(0xfff6ea, 0x8a7258, 0.9))
+  // warmes Hauptlicht schräg von oben, kühles Gegenlicht für die Kanten
+  const d = new THREE.DirectionalLight(0xfff1de, 2.2)
+  d.position.set(1.8, 2.8, 3)
   camera.add(d)
-  const f = new THREE.DirectionalLight(0xfff1dc, 0.5)
-  f.position.set(-3, 0.5, 1)
+  const f = new THREE.DirectionalLight(0xdfe9ff, 0.55)
+  f.position.set(-3, 0.6, 1)
   camera.add(f)
+  const rim = new THREE.DirectionalLight(0xffffff, 0.6)
+  rim.position.set(0, 2, -3)
+  camera.add(rim)
   scene.add(camera)
+}
+
+/** Weiche Raumspiegelung und filmähnliche Farben, damit Oberflächen nach Material aussehen. */
+const envCache = new WeakMap<THREE.WebGLRenderer, THREE.Texture>()
+function look(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.05
+  let env = envCache.get(renderer)
+  if (!env) {
+    const pm = new THREE.PMREMGenerator(renderer)
+    env = pm.fromScene(new RoomEnvironment(), 0.04).texture
+    pm.dispose()
+    envCache.set(renderer, env)
+  }
+  scene.environment = env
+  scene.environmentIntensity = 0.45
 }
 
 interface Piece {
@@ -56,6 +77,53 @@ function fitGrid(sf: Surface): Surface {
     if (sc < score - 1e-9) { score = sc; best = { cols, rows } }
   }
   return { ...sf, ...best }
+}
+
+/** Normal-Map aus der Form eines Teils: innen flach, zum Rand hin abfallend. So erzeugt das
+ *  3D-Licht selbst eine gewölbte, gestanzte Kante, die beim Drehen mitwandert. */
+function bevelNormals(p: Path2D, u0: number, u1: number, v0: number, v1: number, N: number): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = cv.height = N
+  const c = cv.getContext('2d')!
+  c.setTransform(N / (u1 - u0), 0, 0, N / (v1 - v0), (-u0 * N) / (u1 - u0), (-v0 * N) / (v1 - v0))
+  c.fillStyle = '#fff'; c.fill(p)
+  const src = c.getImageData(0, 0, N, N).data
+  let h = new Float32Array(N * N)
+  for (let i = 0; i < N * N; i++) h[i] = src[i * 4] / 255
+  // zweimal Kastenweichzeichner in beide Richtungen, Radius etwa 5 % der Kachel
+  const r = Math.max(2, Math.round(N * 0.05))
+  const tmp = new Float32Array(N * N)
+  for (let pass = 0; pass < 2; pass++) {
+    for (let y = 0; y < N; y++) {
+      let acc = 0
+      for (let x = -r; x <= r; x++) acc += h[y * N + Math.min(N - 1, Math.max(0, x))]
+      for (let x = 0; x < N; x++) {
+        tmp[y * N + x] = acc / (2 * r + 1)
+        acc += h[y * N + Math.min(N - 1, x + r + 1)] - h[y * N + Math.max(0, x - r)]
+      }
+    }
+    for (let x = 0; x < N; x++) {
+      let acc = 0
+      for (let y = -r; y <= r; y++) acc += tmp[Math.min(N - 1, Math.max(0, y)) * N + x]
+      for (let y = 0; y < N; y++) {
+        h[y * N + x] = acc / (2 * r + 1)
+        acc += tmp[Math.min(N - 1, y + r + 1) * N + x] - tmp[Math.max(0, y - r) * N + x]
+      }
+    }
+  }
+  // weicher Übergang: innen ganz flach, nur der Rand fällt ab
+  h = h.map((v) => { const t = Math.min(1, Math.max(0, v * 1.15)); return t * t * (3 - 2 * t) })
+  const img = c.createImageData(N, N), d = img.data, k = N * 0.9
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x
+    const dx = (h[y * N + Math.min(N - 1, x + 1)] - h[y * N + Math.max(0, x - 1)]) * k
+    const dy = (h[Math.min(N - 1, y + 1) * N + x] - h[Math.max(0, y - 1) * N + x]) * k
+    const nx = -dx, ny = dy, nz = 1, l = Math.hypot(nx, ny, nz)
+    d[i * 4] = (nx / l * 0.5 + 0.5) * 255; d[i * 4 + 1] = (ny / l * 0.5 + 0.5) * 255; d[i * 4 + 2] = (nz / l * 0.5 + 0.5) * 255; d[i * 4 + 3] = 255
+  }
+  c.setTransform(1, 0, 0, 1, 0, 0); c.putImageData(img, 0, 0)
+  const t = canvasTex(cv, false)
+  t.channel = 1
+  return t
 }
 
 /** Baut aus einer Oberfläche die einzelnen Puzzleteile. */
@@ -114,6 +182,7 @@ function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
       return t
     }
     const mask = draw(false), ghostTex = draw(true)
+    const normals = bevelNormals(p, u0, u1, v0, v1, many ? 96 : 176)
 
     // eigenes Bild für dieses Teil: Ausschnitt aus dem Motiv plus geprägte Kante wie bei 2D
     const regW = ((u1 - u0) / cols) * sf.tw, regH = ((v1 - v0) / rows) * sf.th
@@ -166,11 +235,14 @@ function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
       g.setIndex(idx)
       return g
     }
-    const gOuter = layer(0, false), gMid = layer(sf.thick * 0.5, false), gInner = layer(sf.thick, true)
-    const printMat = new THREE.MeshStandardMaterial({ map, alphaMap: mask, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.42, metalness: 0.02 })
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xcbb898, alphaMap: mask, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.7, side: THREE.DoubleSide })
+    const T = sf.thick * 1.5
+    const gOuter = layer(0, false), gInner = layer(T, true)
+    // Zwischenlagen ergeben von der Seite eine geschlossene Pappkante
+    const mids = (many ? [0.5] : [0.2, 0.4, 0.6, 0.8]).map((f) => layer(T * f, false))
+    const printMat = new THREE.MeshStandardMaterial({ map, normalMap: normals, normalScale: new THREE.Vector2(1.6, 1.6), alphaMap: mask, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.48, metalness: 0, envMapIntensity: 0.6 })
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xb79a72, alphaMap: mask, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.85, side: THREE.DoubleSide, envMapIntensity: 0.3 })
     const solid = new THREE.Group()
-    solid.add(new THREE.Mesh(gOuter, printMat), new THREE.Mesh(gMid, bodyMat), new THREE.Mesh(gInner, bodyMat))
+    solid.add(new THREE.Mesh(gOuter, printMat), ...mids.map((g) => new THREE.Mesh(g, bodyMat)), new THREE.Mesh(gInner, bodyMat))
     solid.visible = false
     const ghost = new THREE.Mesh(gOuter, new THREE.MeshBasicMaterial({ map: ghostTex, transparent: true, depthWrite: false, side: THREE.DoubleSide }))
 
@@ -178,7 +250,7 @@ function buildPieces(sf0: Surface, seed: number, aniso: number): Piece[] {
     const center = sf.fn(Uc, Vc)
     let radius = 0
     for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) radius = Math.max(radius, center.distanceTo(sf.fn(wrap ? (((col + a) / cols) % 1) : (col + a) / cols, (row + b) / rows)))
-    out.push({ solid, ghost, center, normal: normalAt(Uc, Vc).multiplyScalar(sign), radius, disposables: [gOuter, gMid, gInner, mask, ghostTex, map, printMat, bodyMat, ghost.material as THREE.Material] })
+    out.push({ solid, ghost, center, normal: normalAt(Uc, Vc).multiplyScalar(sign), radius, disposables: [gOuter, ...mids, gInner, mask, ghostTex, map, normals, printMat, bodyMat, ghost.material as THREE.Material] })
   }
   return out
 }
@@ -226,6 +298,7 @@ export class Stage3D {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
     this.renderer.setClearColor(0x000000, 0)
     lights(this.scene, this.camera)
+    look(this.renderer, this.scene)
     this.scene.add(this.root)
     const aniso = this.renderer.capabilities.getMaxAnisotropy()
     built.surfaces.forEach((s, n) => this.pieces.push(...buildPieces(s, seed + n * 101, aniso)))
@@ -273,6 +346,7 @@ export class Stage3D {
   /** Vorschaubild für jedes Teil, gerade von vorn auf die bedruckte Seite. */
   thumbs(size = 200): string[] {
     const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 1, 0.05, 50)
+    look(this.renderer, scene)
     lights(scene, cam)
     this.renderer.setPixelRatio(1)
     this.renderer.setSize(size, size, false)
@@ -475,6 +549,7 @@ export function modelThumbs(onUpdate?: (r: Record<string, string>) => void): Rec
   renderer.setPixelRatio(1); renderer.setSize(480, 360, false)
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, 4 / 3, 0.1, 100)
   lights(scene, cam)
+  look(renderer, scene)
   const todo = MODELS.filter((m) => !cache[m.id])
   const step = () => {
     const m = todo.shift()
