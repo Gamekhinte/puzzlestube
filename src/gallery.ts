@@ -88,7 +88,7 @@ export const GALLERY: GalleryImage[] = [
   { id: "g:kind-mit-spielzeug-renoir", file: "kind-mit-spielzeug-renoir", title: "Kind mit Spielzeug (Renoir)", category: "Berühmte Gemälde", author: "Pierre-Auguste Renoir", license: "CC0" },
   { id: "g:fruehstueck-der-ruderer-renoir", file: "fruehstueck-der-ruderer-renoir", title: "Frühstück der Ruderer (Renoir)", category: "Berühmte Gemälde", author: "Pierre-Auguste Renoir", license: "Public domain" },
   { id: "g:tanz-im-moulin-de-la-galette-renoir", file: "tanz-im-moulin-de-la-galette-renoir", title: "Tanz im Moulin de la Galette (Renoir)", category: "Berühmte Gemälde", author: "Pierre-Auguste Renoir", license: "Public domain" },
-  { id: "g:resita-um-1914-fabrik-und-kirche", file: "resita-um-1914-fabrik-und-kirche", title: "Das Werk um 1914", category: "Reșița", author: "FOTO:Fortepan — ID 96244: Adományozó/Donor: Magyar Földrajzi", license: "Public domain" },
+  { id: "g:resita-um-1914-fabrik-und-kirche", file: "resita-um-1914-fabrik-und-kirche", title: "Das Werk um 1914", category: "Reșița", author: "FOTO:Fortepan, ID 96244: Adományozó/Donor: Magyar Földrajzi", license: "Public domain" },
   { id: "g:resita-im-jahr-1916", file: "resita-im-jahr-1916", title: "Landkarte von 1916", category: "Reșița", author: "unbekannt", license: "Public domain" },
   { id: "g:holzrinne-und-holzlager-1936", file: "holzrinne-und-holzlager-1936", title: "Holzrinne und Holzlager 1936", category: "Reșița", author: "Unknown photographer", license: "Public domain" },
   { id: "g:holzlager-in-resita-1936", file: "holzlager-in-resita-1936", title: "Holzlager in Reșița 1936", category: "Reșița", author: "Unknown photographer", license: "Public domain" },

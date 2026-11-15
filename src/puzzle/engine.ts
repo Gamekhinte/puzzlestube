@@ -106,7 +106,7 @@ export class PuzzleEngine {
     this.pw = this.W / this.cols
     this.ph = this.H / this.rows
     // Rand um jedes Teil: Platz für die Nasen und den eingebackenen Schatten
-    const pad = Math.ceil(Math.min(this.pw, this.ph) * 0.18)
+    const pad = Math.ceil(Math.min(this.pw, this.ph) * 0.26)
     this.mx = Math.ceil(this.pw * MARGIN) + pad
     this.my = Math.ceil(this.ph * MARGIN) + pad
     this.lockedLayer = document.createElement('canvas')
@@ -178,20 +178,20 @@ export class PuzzleEngine {
         const c = sp.getContext('2d')!
         c.translate(this.mx, this.my)
         // Schatten und Pappdicke werden einmal ins Teil gebacken, kosten beim Ziehen also nichts
-        const thick = m * 0.035
+        const thick = m * 0.055
         c.save()
-        c.shadowColor = 'rgba(38,22,8,0.5)'
-        c.shadowBlur = m * 0.09
-        c.shadowOffsetX = m * 0.025
-        c.shadowOffsetY = m * 0.06
-        c.translate(thick * 0.6, thick)
+        c.shadowColor = 'rgba(30,16,6,0.55)'
+        c.shadowBlur = m * 0.13
+        c.shadowOffsetX = m * 0.03
+        c.shadowOffsetY = m * 0.09
+        c.translate(thick * 0.5, thick)
         c.fillStyle = '#3a2a1c'
         c.fill(p)
         c.restore()
-        // sichtbare Seitenkante: mehrere Lagen Pappe nach unten rechts versetzt
-        for (let k = 4; k >= 1; k--) {
-          c.save(); c.translate((thick * 0.6 * k) / 4, (thick * k) / 4)
-          c.fillStyle = k === 4 ? '#5e4430' : k === 3 ? '#7a5b40' : k === 2 ? '#94744f' : '#ad8d66'
+        // sichtbare Seitenkante: Lagen Pappe nach unten versetzt, unten dunkler
+        for (let k = 6; k >= 1; k--) {
+          c.save(); c.translate((thick * 0.5 * k) / 6, (thick * k) / 6)
+          c.fillStyle = ['#c3a37a', '#ad8b62', '#9a7752', '#866444', '#735438', '#5e432c'][k - 1]
           c.fill(p); c.restore()
         }
         c.save()
@@ -199,23 +199,34 @@ export class PuzzleEngine {
         c.drawImage(this.img, -col * pw, -row * ph)
         // leichter Glanz über die Fläche: oben links heller, unten rechts dunkler
         const sheen = c.createLinearGradient(0, 0, pw, ph)
-        sheen.addColorStop(0, 'rgba(255,255,255,0.10)'); sheen.addColorStop(0.5, 'rgba(255,255,255,0)'); sheen.addColorStop(1, 'rgba(0,0,0,0.10)')
+        sheen.addColorStop(0, 'rgba(255,255,255,0.16)'); sheen.addColorStop(0.45, 'rgba(255,255,255,0)'); sheen.addColorStop(1, 'rgba(0,0,0,0.14)')
         c.fillStyle = sheen; c.fillRect(-pw, -ph, pw * 3, ph * 3)
-        // geprägte Kante in zwei weichen Stufen: Licht von oben links, Schatten unten rechts
-        c.lineJoin = 'round'
-        const bevel = (o: number, w: number, dark: string, light: string) => {
-          c.lineWidth = lineW * w
-          c.save(); c.translate(-lineW * o, -lineW * o); c.strokeStyle = dark; c.stroke(p); c.restore()
-          c.save(); c.translate(lineW * o, lineW * o); c.strokeStyle = light; c.stroke(p); c.restore()
-        }
-        bevel(2.4, 6, 'rgba(0,0,0,0.16)', 'rgba(255,255,255,0.22)')
-        bevel(1.3, 3, 'rgba(0,0,0,0.28)', 'rgba(255,255,255,0.5)')
         c.restore()
+        // gewölbte Kante: weicher Innenschatten, Licht von oben links, Schatten unten rechts
+        const many = this.total > 500
+        this.emboss(c, p, m * 0.045, m * 0.09, 'rgba(255,255,255,0.75)', 'rgba(20,10,0,0.55)')
+        if (!many) this.emboss(c, p, m * 0.014, m * 0.02, 'rgba(255,255,255,0.55)', 'rgba(20,10,0,0.4)')
+        c.lineJoin = 'round'
         c.lineWidth = lineW * 0.9
-        c.strokeStyle = 'rgba(30,20,12,0.55)'
+        c.strokeStyle = 'rgba(30,20,12,0.6)'
         c.stroke(p)
         this.sprites.push(sp)
       }
+    }
+  }
+
+  /** Innenschatten an der Kante eines Teils: hell oben links, dunkel unten rechts (wirkt gewölbt). */
+  private emboss(c: CanvasRenderingContext2D, p: Path2D, off: number, blur: number, light: string, dark: string) {
+    const ring = new Path2D()
+    ring.rect(-this.W, -this.H, this.W * 3, this.H * 3)
+    ring.addPath(p)
+    for (const [col, d] of [[light, 1], [dark, -1]] as const) {
+      c.save()
+      c.clip(p)
+      c.shadowColor = col; c.shadowBlur = blur; c.shadowOffsetX = off * d; c.shadowOffsetY = off * d
+      c.fillStyle = '#000'
+      c.fill(ring, 'evenodd')
+      c.restore()
     }
   }
 
@@ -264,7 +275,9 @@ export class PuzzleEngine {
     c.save()
     c.translate(x, y)
     c.save(); c.clip(this.paths[i]); c.drawImage(this.img, -x, -y); c.restore()
-    // feine Fuge wie bei einem echten gelegten Puzzle
+    // leicht gewölbt wie echte gelegte Pappe, dazu die feine Fuge
+    const m = Math.min(this.pw, this.ph)
+    this.emboss(c, this.paths[i], m * 0.025, m * 0.05, 'rgba(255,255,255,0.4)', 'rgba(20,10,0,0.32)')
     c.lineJoin = 'round'
     c.lineWidth = this.lineW * 1.6
     c.strokeStyle = 'rgba(255,255,255,0.16)'

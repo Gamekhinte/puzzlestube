@@ -31,11 +31,9 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
   return (
     <Modal title="Wie viele Teile?" onClose={onClose} wide>
       {info && (
-        <div className="mb-4 flex items-center gap-4">
-          <img src={info.thumb} alt="" className="h-24 w-32 rounded-lg border border-black/15 object-cover" draggable={false} />
-          <div className="min-w-0">
-            <div className="truncate text-[22px] font-bold">{info.title}</div>
-          </div>
+        <div className="mb-4">
+          <img src={info.thumb} alt="" className="mb-2 max-h-[200px] w-full rounded-xl object-cover" draggable={false} />
+          <div className="truncate text-[21px] font-bold">{info.title}</div>
         </div>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -45,7 +43,7 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
           return (
             <button key={s.count} className={`btn flex-col !gap-0 !py-3 ${pct !== undefined ? 'btn-on' : ''}`} onClick={() => onStart(c, r)}>
               <span className="text-[26px] font-bold leading-tight">{c * r} Teile</span>
-              <span className="text-[18px] font-normal opacity-90">{pct !== undefined ? `${pct}% fertig, weiter` : `${c} × ${r}, ${s.level}`}</span>
+              <span className="text-[16px] font-normal opacity-90">{pct !== undefined ? `${pct}%, weiter` : s.level}</span>
             </button>
           )
         })}
