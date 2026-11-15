@@ -307,8 +307,10 @@ export class Stage3D {
 
   private place() {
     // im Hochformat weiter weg, damit das Modell ganz ins Bild passt
-    const k = this.camera.aspect < 1 ? 1 / this.camera.aspect : 1
-    const d = this.dist * Math.min(k, 1.9)
+    // im breiten Querformat näher ran, die Höhe ist dort knapp und das Modell soll sie füllen
+    const a = this.camera.aspect
+    const k = a < 1 ? Math.min(1 / a, 1.9) : a > 1.6 ? 0.84 : 1
+    const d = this.dist * k
     this.camera.position.set(d * Math.sin(this.pol) * Math.sin(this.az), d * Math.cos(this.pol), d * Math.sin(this.pol) * Math.cos(this.az))
     this.camera.lookAt(0, 0, 0)
   }

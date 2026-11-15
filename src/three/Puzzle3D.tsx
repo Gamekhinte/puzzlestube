@@ -71,14 +71,14 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
             save(finished)
             if (finished) { setDone(true); stage.celebrate(); fanfare() }
           } else if (res === 'wrong') {
-            setMsg('Hier passt das Teil nicht. Drehe das Modell, bis die richtige Stelle vorne ist. Der Knopf Tipp hilft dir.'); setBad((n) => n + 1)
+            setMsg('Passt hier nicht. Die Glühbirne zeigt die Stelle.'); setBad((n) => n + 1)
           } else {
-            setMsg('Tippe auf das Modell, dort wo das Teil hingehört.')
+            setMsg('Auf das Modell tippen.')
           }
         }
         stage.onTap = (x, y) => {
           const p = selRef.current
-          if (p === null) setMsg('Wähle zuerst unten ein Teil aus.')
+          if (p === null) setMsg('Erst unten ein Teil wählen.')
           else placeRef.current(p, x, y)
         }
         setLoading(false)
@@ -112,32 +112,31 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
     window.addEventListener('pointercancel', end)
   }
 
+  useEffect(() => { if (!msg) return; const t = setTimeout(() => setMsg(''), 3500); return () => clearTimeout(t) }, [msg, bad])
+
   const placedCount = total - tray.length
-  const hintText = done ? '' : msg || (sel === null ? 'Tippe unten ein Teil an oder ziehe es auf das Modell. Mit einem Finger drehst du das Modell.' : 'Tippe jetzt auf die Stelle am Modell, an die das Teil gehört.')
+  const hintText = done ? '' : msg
 
   return (
     <div className="einblenden tisch fixed inset-0 flex flex-col">
-      <header className="safe-t z-10 border-b border-black/15 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-2 p-2">
-          <button className="btn !px-3" onClick={() => onExit()}><Icon name="back" /><span>Zurück</span></button>
+      {/* schlanke Kopfzeile direkt auf dem Holz, Werkzeuge nur als Icons */}
+      <header className="safe-t z-10">
+        <div className="flex items-center gap-2 px-2 pb-1 pt-2">
+          <button className="ibtn" onClick={() => onExit()} aria-label="Zurück" title="Zurück"><Icon name="back" /></button>
           <div className="min-w-0 flex-1 px-1">
-            <div className="truncate text-[20px] font-bold leading-tight">{model.name}</div>
-            <div className="text-[18px] text-ink2">{loading ? `${total} Teile` : `${placedCount} von ${total} Teilen`}</div>
+            <div className="truncate text-[19px] font-bold leading-tight">{model.name}</div>
+            <div className="text-[16px] leading-tight text-ink2">{loading ? `${total} Teile` : `${placedCount} / ${total}`}</div>
           </div>
-          <button className="btn !px-3" disabled={sel === null || done} style={{ opacity: sel === null || done ? 0.45 : 1 }} onClick={() => { if (sel !== null) { stageRef.current?.hint(sel); setMsg('Das Modell dreht sich zur richtigen Stelle, sie leuchtet gelb.') } }}>
-            <Icon name="bulb" /><span>Tipp</span>
-          </button>
-          <button className="btn !px-3" onClick={() => setAsk(true)} aria-label="Neu beginnen"><Icon name="reset" /><span className="hidden sm:inline">Neu</span></button>
+          <button className="ibtn" disabled={sel === null || done} aria-label="Tipp" title="Tipp" onClick={() => { if (sel !== null) { stageRef.current?.hint(sel); setMsg('') } }}><Icon name="bulb" /></button>
+          <button className="ibtn" onClick={() => stageRef.current?.resetView()} aria-label="Ansicht zurücksetzen" title="Ansicht zurücksetzen"><Icon name="fit" /></button>
+          <button className="ibtn" onClick={() => setAsk(true)} aria-label="Neu beginnen" title="Neu beginnen"><Icon name="reset" /></button>
         </div>
       </header>
 
       <div className="relative min-h-0 flex-1">
         <canvas ref={canvasRef} className="no-touch absolute inset-0 h-full w-full" aria-label="3D-Modell" />
         {hintText && !loading && !error && (
-          <div key={bad} className={`pointer-events-none absolute inset-x-3 top-3 mx-auto max-w-2xl rounded-xl border border-black/15 bg-white shadow-sm px-4 py-2.5 text-center text-[19px] ${msg && bad ? 'wackel' : ''}`} role="status">{hintText}</div>
-        )}
-        {!loading && !error && (
-          <button className="btn absolute bottom-3 right-3 !px-3" onClick={() => stageRef.current?.resetView()} aria-label="Ansicht zurücksetzen"><Icon name="fit" /></button>
+          <div key={bad} className={`pointer-events-none absolute left-1/2 top-2 max-w-[90%] -translate-x-1/2 rounded-xl bg-white/90 px-4 py-2 text-center text-[18px] shadow-sm ${msg && bad ? 'wackel' : ''}`} role="status">{hintText}</div>
         )}
         {loading && <Loading text="Dein 3D-Puzzle wird vorbereitet" />}
         {error && (
@@ -149,8 +148,7 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
         {done && (
           <div className="rauf card absolute inset-x-3 bottom-3 mx-auto max-w-xl p-5 text-center">
             <div className="auftauchen mb-1 flex justify-center text-gold"><Icon name="trophy" size={36} /></div>
-            <div className="h1 mb-1">Geschafft!</div>
-            <p className="mb-4 text-[20px]">{model.name} ist fertig gebaut.</p>
+            <div className="h1 mb-4">Geschafft!</div>
             <div className="flex flex-wrap gap-3">
               <button className="btn flex-1" onClick={() => onExit()}>Weitere 3D-Puzzles</button>
               <button className="btn btn-primary flex-1" onClick={() => onExit('sammlung')}>Zur Sammlung</button>
@@ -160,15 +158,15 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
       </div>
 
       {!done && !error && (
-        <div className="safe-b border-t border-black/15 bg-white">
-          <div className="flex gap-3 overflow-x-auto p-3" style={{ touchAction: 'pan-x', overscrollBehavior: 'contain' }}>
+        <div className="safe-b bg-[rgba(248,240,228,0.55)] shadow-[0_-6px_10px_-8px_rgba(40,24,10,0.35)]">
+          <div className="ohne-leiste flex gap-2 overflow-x-auto p-2" style={{ touchAction: 'pan-x', overscrollBehavior: 'contain' }}>
             {tray.map((p) => (
               <button key={p} onPointerDown={(e) => startDrag(p, e)} aria-label={`Teil ${p + 1}`} aria-pressed={sel === p}
-                className={`flex h-[104px] w-[104px] flex-none items-center justify-center rounded-xl border-4 bg-wood ${sel === p ? 'border-green' : 'border-line'}`} style={{ touchAction: 'pan-x' }}>
-                {thumbs[p] && <img src={thumbs[p]} alt="" className="pointer-events-none h-[88px] w-[88px]" draggable={false} />}
+                className={`teil3d flex flex-none items-center justify-center rounded-xl border-[3px] bg-white/60 transition-colors ${sel === p ? 'border-green bg-white' : 'border-transparent'}`} style={{ touchAction: 'pan-x' }}>
+                {thumbs[p] && <img src={thumbs[p]} alt="" className="pointer-events-none h-[86%] w-[86%]" draggable={false} />}
               </button>
             ))}
-            {!loading && tray.length === 0 && <div className="py-6 text-[19px] text-ink2">Alle Teile sind verbaut.</div>}
+            
           </div>
         </div>
       )}

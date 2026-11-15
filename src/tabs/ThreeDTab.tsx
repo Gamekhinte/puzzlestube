@@ -23,11 +23,9 @@ export function ThreeDTab({ onPlay }: { onPlay: (model: string, count: number) =
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-5">
-      <h1 className="h1 mb-1">3D Puzzles</h1>
-      <p className="mb-5 text-[19px] text-ink2">Baue ein Modell aus einzelnen Teilen zusammen. Mit einem Finger drehst du es.</p>
+      <h1 className="h1 mb-5">3D Puzzles</h1>
 
       <div className="mb-6">
-        <div className="mb-2 text-[20px] font-semibold">Schwierigkeit</div>
         <div className="grid max-w-2xl grid-cols-3 gap-3" role="radiogroup" aria-label="Schwierigkeit">
           {[[12, 'Einfach'], [24, 'Mittel'], [200, 'Schwer']].map(([n, label]) => (
             <button key={n} role="radio" aria-checked={count === n} className={`btn flex-col !gap-0 !py-3 ${count === n ? 'btn-on' : ''}`} onClick={() => pick(n as number)}>

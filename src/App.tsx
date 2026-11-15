@@ -50,10 +50,10 @@ export default function App() {
         )}
       </main>
 
-      <nav className="safe-b flex flex-none border-t border-black/15 bg-white flach:w-[132px] flach:flex-col flach:border-r flach:border-t-0" aria-label="Bereiche">
+      <nav className="safe-b flex flex-none bg-[rgba(248,240,228,0.72)] shadow-[0_-6px_12px_-10px_rgba(40,24,10,0.4)] backdrop-blur-sm flach:w-[92px] flach:flex-col flach:shadow-[6px_0_12px_-10px_rgba(40,24,10,0.4)]" aria-label="Bereiche">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} aria-current={tab === t.id ? 'page' : undefined}
-            className={`flex min-h-[76px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[18px] font-semibold leading-tight transition-colors duration-200 ${tab === t.id ? 'bg-green text-white' : 'text-ink'}`}>
+            className={`flex min-h-[68px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[17px] font-semibold leading-tight transition-colors duration-200 flach:text-[14px] ${tab === t.id ? 'bg-green text-white' : 'text-ink'}`}>
             <Icon name={t.icon} size={32} />
             <span>{t.label}</span>
           </button>

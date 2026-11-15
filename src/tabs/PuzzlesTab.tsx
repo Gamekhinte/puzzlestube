@@ -67,14 +67,15 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
         </div>
       </header>
 
-      <button className="btn btn-primary mb-2 w-full !min-h-[68px] !text-[22px] sm:w-auto sm:!px-8" onClick={() => input.current?.click()}>
-        <Icon name="plus" size={30} /><span>Eigene Fotos hochladen</span>
-      </button>
-      <button className="btn mb-2 ml-0 w-full !min-h-[68px] !text-[22px] sm:ml-3 sm:w-auto sm:!px-8" onClick={() => setSat(true)}>
-        <Icon name="globe" size={30} /><span>Satellitenbild von oben</span>
-      </button>
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:flex">
+        <button className="btn btn-primary !min-h-[64px] !text-[19px] leading-tight sm:!px-6 sm:!text-[21px]" onClick={() => input.current?.click()}>
+          <Icon name="plus" size={28} /><span>Eigene Fotos</span>
+        </button>
+        <button className="btn !min-h-[64px] !text-[19px] leading-tight sm:!px-6 sm:!text-[21px]" onClick={() => setSat(true)}>
+          <Icon name="globe" size={28} /><span>Von oben</span>
+        </button>
+      </div>
       <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(e) => void upload(e.target.files)} />
-      <p className="mb-6 text-[18px] text-ink2">Ein Foto oder gleich mehrere auswählen. Mehrere Fotos kommen zusammen in ein Album. Alles bleibt nur auf diesem Gerät.</p>
       {note && <p className="card mb-6 border-danger p-4 text-[20px] text-danger" role="alert">{note}</p>}
 
       {albums.map((a) => {
@@ -84,12 +85,12 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
         return (
           <section key={a.id} className="mb-8">
             <div className="mb-3 flex flex-wrap items-center gap-3">
-              <h2 className="h2 flex flex-1 items-center gap-2"><Icon name={a.id === 'satellit' ? 'globe' : 'photos'} />{a.name}</h2>
-              <button className={`btn !min-h-[52px] !px-4 ${editing ? 'btn-primary' : ''}`} onClick={() => setEdit(editing ? null : a.id)}>
-                {editing ? <><Icon name="check" /><span>Fertig</span></> : <><Icon name="trash" /><span>Löschen</span></>}
+              <h2 className="h2 flex min-w-0 flex-1 items-center gap-2"><Icon name={a.id === 'satellit' ? 'globe' : 'photos'} />{a.name}</h2>
+              <button className={`ibtn ${editing ? 'an' : ''}`} onClick={() => setEdit(editing ? null : a.id)} aria-label={editing ? 'Fertig mit Löschen' : `Bilder aus ${a.name} löschen`} title={editing ? 'Fertig' : 'Löschen'}>
+                <Icon name={editing ? 'check' : 'trash'} />
               </button>
             </div>
-            {editing && <p className="mb-3 text-[19px] text-ink2">Tippe bei einem Bild auf „Löschen“. Fertig drücken, wenn du nichts mehr löschen willst.</p>}
+            
             <Grid>
               {ps.map((p) => editing ? (
                 <div key={p.id} className="card overflow-hidden p-0">
@@ -112,12 +113,11 @@ export function PuzzlesTab({ onPick }: { onPick: (imageId: string) => void }) {
         )
       })}
 
-      <nav className="card mb-8 p-4" aria-label="Themen">
-        <div className="mb-3 text-[20px] font-semibold">Fertige Bilder nach Thema</div>
+      <nav className="mb-8" aria-label="Themen">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {CATEGORIES.map((cat) => (
-            <button key={cat} className="btn !min-h-[56px] !justify-between !px-4 text-left" onClick={() => document.getElementById(`thema-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-              <span>{cat}</span><span className="text-[18px] font-normal text-ink2">{GALLERY.filter((g) => g.category === cat).length}</span>
+            <button key={cat} className="btn !min-h-[54px] !px-3 !text-[18px] leading-tight" onClick={() => document.getElementById(`thema-${cat}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+              {cat}
             </button>
           ))}
         </div>

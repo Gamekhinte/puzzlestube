@@ -55,6 +55,18 @@ body {
   .btn-primary, .btn-on { background: var(--color-green); border-color: var(--color-green-dark); color: #fff; }
   .btn-primary:active, .btn-on:active { background: var(--color-green-dark); }
   .btn-danger { color: var(--color-danger); border-color: var(--color-danger); }
+  /* Icon-Knopf: schwebt auf dem Holz, ohne Text */
+  .ibtn {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 54px; height: 54px; border-radius: 14px;
+    border: 1px solid rgba(60, 40, 20, 0.16); background: rgba(255, 255, 255, 0.9); color: var(--color-ink);
+    box-shadow: 0 2px 6px rgba(50, 30, 10, 0.16);
+    transition: transform 0.12s var(--weich, ease), background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+  .ibtn:active { transform: scale(0.94); }
+  .ibtn.an { background: var(--color-green); border-color: var(--color-green-dark); color: #fff; }
+  .ibtn:disabled { opacity: 0.4; }
+  @media (orientation: landscape) and (max-height: 520px) { .ibtn { width: 46px; height: 46px; border-radius: 12px; } }
   .card { background: #fff; border: 1px solid rgba(60, 40, 20, 0.14); border-radius: 12px; box-shadow: 0 2px 6px rgba(50, 30, 10, 0.16); }
   .h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
   .h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
@@ -109,3 +121,10 @@ body {
   .bild, .kachel, .btn { transition: none; }
   .kachel:hover { transform: none; }
 }
+
+/* Teile in der 3D-Leiste: im Querformat kleiner, damit das Modell Platz hat */
+.teil3d { width: 96px; height: 96px; }
+@media (orientation: landscape) and (max-height: 520px) { .teil3d { width: 70px; height: 70px; } }
+/* Scrollbalken ausblenden, wischen geht weiter */
+.ohne-leiste { scrollbar-width: none; }
+.ohne-leiste::-webkit-scrollbar { display: none; }

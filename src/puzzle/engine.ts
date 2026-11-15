@@ -664,9 +664,11 @@ export class PuzzleEngine {
       const top = this.ch - H, ts = this.trayCell, rows = this.trayRows, list = this.trayList()
       this.trayScroll = Math.max(0, Math.min(this.trayMax(list.length), this.trayScroll))
       c.setTransform(dpr, 0, 0, dpr, 0, 0)
-      c.fillStyle = 'rgba(40,24,10,0.10)'; c.fillRect(0, top - 6, this.cw, 6)
-      c.fillStyle = '#FBF8F3'; c.fillRect(0, top, this.cw, H)
-      c.fillStyle = 'rgba(60,40,20,0.22)'; c.fillRect(0, top, this.cw, 1)
+      // Leiste liegt halbdurchsichtig auf dem Holz statt als weißer Balken
+      const kante = c.createLinearGradient(0, top - 10, 0, top); kante.addColorStop(0, 'rgba(40,24,10,0)'); kante.addColorStop(1, 'rgba(40,24,10,0.10)')
+      c.fillStyle = kante; c.fillRect(0, top - 10, this.cw, 10)
+      c.fillStyle = 'rgba(248,240,228,0.55)'; c.fillRect(0, top, this.cw, H)
+      c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(0, top, this.cw, 1)
       c.imageSmoothingQuality = 'high'
       const k = (ts - 6) / (Math.max(this.pw, this.ph) * 1.45)
       const sw = (this.pw + this.mx * 2) * k, sh = (this.ph + this.my * 2) * k

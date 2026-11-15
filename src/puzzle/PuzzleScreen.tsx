@@ -101,39 +101,30 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
   }
 
   const eng = engineRef.current
-  const tool = 'btn flex-1 !px-2 sm:flex-none sm:!px-4'
-
   return (
     <div className="einblenden tisch fixed inset-0 flex flex-col">
-      <header className="safe-t z-10 border-b border-black/15 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-2 p-2">
-          <button className="btn !px-3" onClick={() => onExit()}><Icon name="back" /><span>Zurück</span></button>
+      {/* schlanke Kopfzeile direkt auf dem Holz, Werkzeuge nur als Icons */}
+      <header className="safe-t z-10">
+        <div className="flex items-center gap-2 px-2 pb-1 pt-2">
+          <button className="ibtn" onClick={() => onExit()} aria-label="Zurück" title="Zurück"><Icon name="back" /></button>
           <div className="min-w-0 flex-1 px-1">
-            <div className="truncate text-[20px] font-bold leading-tight">{title || 'Puzzle'}</div>
-            <div className="text-[18px] text-ink2">{cols * rows} Teile, {percent}% fertig</div>
+            <div className="truncate text-[19px] font-bold leading-tight">{title || 'Puzzle'}</div>
+            <div className="text-[16px] leading-tight text-ink2">{cols * rows} Teile · {percent}%</div>
           </div>
-          <button className="btn !px-3" onClick={() => setMenu(true)} aria-label="Menü"><Icon name="menu" /><span className="hidden sm:inline">Menü</span></button>
-          <div className="flex w-full gap-2 lg:w-auto">
-            <button className={`${tool} ${preview ? 'btn-on' : ''}`} aria-pressed={preview} onClick={() => { const v = !preview; setPreview(v); eng?.setPreview(v) }}>
-              <Icon name="eye" /><span>Vorschau</span>
-            </button>
-            <button className={`${tool} ${edges ? 'btn-on' : ''}`} aria-pressed={edges} onClick={() => { const v = !edges; setEdges(v); eng?.setEdgesOnly(v) }}>
-              <Icon name="frame" /><span>Nur Randteile</span>
-            </button>
-            <button className={tool} onClick={() => eng?.tidy()}>
-              <Icon name="tidy" /><span>Aufräumen</span>
-            </button>
-          </div>
+          <button className={`ibtn ${preview ? 'an' : ''}`} aria-pressed={preview} aria-label="Vorschau" title="Vorschau" onClick={() => { const v = !preview; setPreview(v); eng?.setPreview(v) }}><Icon name="eye" /></button>
+          <button className={`ibtn ${edges ? 'an' : ''}`} aria-pressed={edges} aria-label="Nur Randteile" title="Nur Randteile" onClick={() => { const v = !edges; setEdges(v); eng?.setEdgesOnly(v) }}><Icon name="frame" /></button>
+          <button className="ibtn" onClick={() => eng?.tidy()} aria-label="Aufräumen" title="Aufräumen"><Icon name="tidy" /></button>
+          <button className="ibtn" onClick={() => setMenu(true)} aria-label="Menü" title="Menü"><Icon name="menu" /></button>
         </div>
       </header>
 
       <div className="relative min-h-0 flex-1">
         <canvas ref={canvasRef} className="no-touch absolute inset-0 h-full w-full" aria-label="Puzzlefläche" />
         {!loading && !error && (
-          <div className="absolute right-3 top-3 flex flex-col gap-2">
-            <button className="btn !px-0" onClick={() => eng?.zoomBy(1.4)} aria-label="Größer"><Icon name="zoomin" /></button>
-            <button className="btn !px-0" onClick={() => eng?.zoomBy(1 / 1.4)} aria-label="Kleiner"><Icon name="zoomout" /></button>
-            <button className="btn !px-0" onClick={() => eng?.fitAll()} aria-label="Alles zeigen"><Icon name="fit" /></button>
+          <div className="absolute right-2 top-2 flex flex-col gap-2">
+            <button className="ibtn" onClick={() => eng?.zoomBy(1.4)} aria-label="Größer" title="Größer"><Icon name="zoomin" /></button>
+            <button className="ibtn" onClick={() => eng?.zoomBy(1 / 1.4)} aria-label="Kleiner" title="Kleiner"><Icon name="zoomout" /></button>
+            <button className="ibtn" onClick={() => eng?.fitAll()} aria-label="Alles zeigen" title="Alles zeigen"><Icon name="fit" /></button>
           </div>
         )}
         {loading && <Loading text="Dein Puzzle wird vorbereitet" />}
@@ -146,8 +137,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
         {showDone && (
           <div className="rauf card safe-b absolute inset-x-3 bottom-3 mx-auto max-w-xl p-5 text-center">
             <div className="auftauchen mb-1 flex items-center justify-center gap-2 text-gold"><Icon name="trophy" size={36} /></div>
-            <div className="h1 mb-1">Geschafft!</div>
-            <p className="mb-4 text-[20px]">Das Puzzle ist fertig und liegt jetzt in deiner Sammlung.</p>
+            <div className="h1 mb-4">Geschafft!</div>
             <div className="flex flex-wrap gap-3">
               <button className="btn flex-1" onClick={() => setShowDone(false)}>Bild ansehen</button>
               <button className="btn btn-primary flex-1" onClick={() => onExit('sammlung')}>Zur Sammlung</button>
@@ -168,8 +158,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
             <button className="btn btn-danger justify-start" onClick={() => setAskRestart(true)}>
               <Icon name="reset" /><span>Neu beginnen</span>
             </button>
-            <p className="text-[18px] text-ink2">Dein Stand wird von selbst gespeichert. Du kannst jederzeit aufhören und später weiterpuzzeln.</p>
-            <p className="text-[18px] text-ink2">Die Teile liegen unten in der Leiste. Wische zum Blättern und ziehe ein Teil nach oben aufs Brett. Mit zwei Fingern ziehst du die Fläche größer.</p>
+            <p className="text-[17px] text-ink2">Wird von selbst gespeichert.</p>
           </div>
         </Modal>
       )}

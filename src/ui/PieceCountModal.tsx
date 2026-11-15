@@ -35,7 +35,6 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
           <img src={info.thumb} alt="" className="h-24 w-32 rounded-lg border border-black/15 object-cover" draggable={false} />
           <div className="min-w-0">
             <div className="truncate text-[22px] font-bold">{info.title}</div>
-            <div className="text-[18px] text-ink2">Wähle die Größe. Angefangene Puzzles gehen dort weiter, wo du aufgehört hast.</div>
           </div>
         </div>
       )}
