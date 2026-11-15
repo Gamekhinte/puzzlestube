@@ -69,7 +69,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
             if (game) { game.percent = p; game.done = d }
             if (d && !first) { setDone(true); setShowDone(true); fanfare(); setTimeout(save, 0) }
           },
-          onSnap: click,
+          onSnap: () => { click(); try { navigator.vibrate?.(15) } catch { /* nicht überall */ } },
           onDirty: () => { if (!timer) timer = window.setTimeout(save, 400) },
         })
         first = false
@@ -122,6 +122,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
         <canvas ref={canvasRef} className="no-touch absolute inset-0 h-full w-full" aria-label="Puzzlefläche" />
         {!loading && !error && (
           <div className="absolute right-2 top-2 flex flex-col gap-2">
+            <button className="ibtn tipp" onClick={() => eng?.hint()} aria-label="Tipp: wo gehört das Teil hin" title="Tipp"><Icon name="bulb" /></button>
             <button className="ibtn" onClick={() => eng?.zoomBy(1.4)} aria-label="Größer" title="Größer"><Icon name="zoomin" /></button>
             <button className="ibtn" onClick={() => eng?.zoomBy(1 / 1.4)} aria-label="Kleiner" title="Kleiner"><Icon name="zoomout" /></button>
             <button className="ibtn" onClick={() => eng?.fitAll()} aria-label="Alles zeigen" title="Alles zeigen"><Icon name="fit" /></button>

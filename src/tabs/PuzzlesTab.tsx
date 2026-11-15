@@ -65,55 +65,49 @@ export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => 
 
   // Bild des Tages: jeden Tag ein anderes aus der Galerie
   const today = GALLERY[Math.floor(Date.now() / 86400000) % GALLERY.length]
-  const hour = new Date().getHours()
-  const greeting = hour < 11 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend'
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-5">
-      <header className="mb-5 flex items-center gap-4">
-        <Logo size={60} />
+      <header className="mb-5 flex items-center gap-3">
+        <Logo size={56} />
         <div className="min-w-0">
-          <div className="text-[17px] text-ink2">{greeting}</div>
-          <h1 className="text-[30px] font-extrabold leading-tight tracking-tight">Puzzlestube</h1>
+          <h1 className="h1">Puzzlestube</h1>
+          <div className="text-[16px] text-ink2">von screame</div>
         </div>
       </header>
 
-      {/* großes Titelbild: Bild des Tages */}
-      <button className="kachel relative mb-4 block w-full overflow-hidden rounded-2xl bg-wood-dark text-left shadow-[0_6px_18px_rgba(50,30,10,0.22)]" onClick={() => onPick(today.id)}>
-        <div className="aspect-[16/10] w-full sm:aspect-[21/9] lg:aspect-auto lg:h-[340px]">
+      {/* Bild des Tages als großer Abzug mit Bildunterschrift */}
+      <button className="kachel abzug mb-5 block w-full text-left" onClick={() => onPick(today.id)}>
+        <div className="foto aspect-[16/10] w-full sm:aspect-[21/9] lg:aspect-auto lg:h-[340px]">
           <img src={`galerie/${today.file}.jpg`} alt="" className="bild h-full w-full object-cover" draggable={false} onLoad={(e) => e.currentTarget.classList.add('da')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('da') }} />
         </div>
-        <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 bg-[rgba(27,22,16,0.62)] px-4 py-3 text-white">
+        <div className="flex items-center gap-3 px-1.5 py-3">
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold text-[#F2D38A]">Bild des Tages</div>
-            <div className="truncate text-[21px] font-bold leading-tight">{today.title}</div>
+            <div className="text-[15px] text-ink2">Bild des Tages</div>
+            <div className="serif truncate text-[22px] font-bold leading-tight">{today.title}</div>
           </div>
-          <span className="flex h-12 flex-none items-center gap-2 rounded-xl bg-white px-4 text-[18px] font-bold text-ink"><Icon name="puzzle" size={24} />Puzzeln</span>
+          <span className="flex min-h-[50px] flex-none items-center gap-2 rounded-lg bg-green px-4 text-[18px] font-semibold text-white"><Icon name="puzzle" size={22} />Puzzeln</span>
         </div>
       </button>
 
       {last && (
-        <button className="kachel card mb-4 flex w-full items-center gap-4 overflow-hidden p-3 text-left" onClick={() => onResume(last)}>
-          <img src={last.thumb} alt="" className="h-[76px] w-[100px] flex-none rounded-lg object-cover" draggable={false} />
+        <button className="kachel card mb-5 flex w-full items-center gap-3 p-2.5 text-left" onClick={() => onResume(last)}>
+          <img src={last.thumb} alt="" className="h-[68px] w-[90px] flex-none rounded-[3px] object-cover" draggable={false} />
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold text-green">Weiterpuzzeln</div>
-            <div className="truncate text-[19px] font-bold leading-tight">{last.title}</div>
-            <div className="mb-1.5 text-[15px] text-ink2">{last.cols * last.rows} Teile · {last.percent}%</div>
+            <div className="truncate text-[18px] font-bold leading-tight">{last.title}</div>
+            <div className="mb-1.5 text-[15px] text-ink2">Weiterpuzzeln · {last.percent}%</div>
             <Bar percent={last.percent} />
           </div>
-          <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-green text-white"><Icon name="next" size={26} /></span>
+          <span className="flex-none px-1 text-green"><Icon name="next" size={28} /></span>
         </button>
       )}
 
-      {/* zwei große Kacheln für eigene Bilder */}
-      <div className="mb-8 grid grid-cols-2 gap-3">
-        <button className="kachel flex min-h-[104px] flex-col justify-between rounded-2xl bg-green p-4 text-left text-white shadow-[0_4px_12px_rgba(27,68,59,0.35)]" onClick={() => input.current?.click()}>
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15"><Icon name="plus" size={26} /></span>
-          <span className="text-[19px] font-bold leading-tight">Eigenes Foto</span>
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:flex">
+        <button className="btn btn-primary !min-h-[58px] !text-[18px]" onClick={() => input.current?.click()}>
+          <Icon name="plus" size={24} /><span>Eigenes Foto</span>
         </button>
-        <button className="kachel card flex min-h-[104px] flex-col justify-between rounded-2xl p-4 text-left" onClick={() => setSat(true)}>
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F2E3C4] text-[#8A5A12]"><Icon name="globe" size={26} /></span>
-          <span className="text-[19px] font-bold leading-tight">Von oben</span>
+        <button className="btn !min-h-[58px] !text-[18px]" onClick={() => setSat(true)}>
+          <Icon name="globe" size={24} /><span>Von oben</span>
         </button>
       </div>
       <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(e) => void upload(e.target.files)} />
@@ -165,8 +159,8 @@ export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => 
           <section key={cat} id={`thema-${cat}`} className="mb-7 scroll-mt-4">
             <div className="mb-3 flex items-center gap-3">
               <h2 className="h2 min-w-0 flex-1 truncate">{cat}</h2>
-              <button className="flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-[17px] font-semibold text-green active:bg-black/5" onClick={() => setOpen(isOpen ? null : cat)} aria-expanded={isOpen}>
-                {isOpen ? 'Weniger' : `Alle ${items.length}`}<Icon name={isOpen ? 'back' : 'next'} size={20} />
+              <button className="min-h-[44px] px-1 text-[17px] font-semibold text-green underline decoration-green/40 underline-offset-4" onClick={() => setOpen(isOpen ? null : cat)} aria-expanded={isOpen}>
+                {isOpen ? 'Weniger' : `Alle ${items.length}`}
               </button>
             </div>
             {isOpen
@@ -207,13 +201,13 @@ export function Row({ children }: { children: React.ReactNode }) {
 
 export function Tile({ src, title, sub, onClick, badge, small = false }: { src?: string; title: string; sub?: string; onClick: () => void; badge?: React.ReactNode; small?: boolean }) {
   return (
-    <button className={`kachel card relative overflow-hidden p-0 text-left ${small ? 'w-[168px] flex-none snap-start sm:w-[210px]' : ''}`} onClick={onClick}>
-      <div className="aspect-[4/3] w-full bg-wood-dark">
+    <button className={`kachel abzug relative text-left ${small ? 'w-[168px] flex-none snap-start sm:w-[210px]' : ''}`} onClick={onClick}>
+      <div className="foto aspect-[4/3] w-full">
         {src && <img src={src} alt="" className="bild h-full w-full object-cover" draggable={false} loading="lazy" onLoad={(e) => e.currentTarget.classList.add('da')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('da') }} />}
       </div>
       {badge}
-      <div className="px-3 py-2.5">
-        <div className={`${small ? 'line-clamp-2 text-[17px]' : 'text-[19px]'} font-semibold leading-tight`}>{title}</div>
+      <div className="px-1 pb-2.5 pt-2">
+        <div className={`${small ? 'line-clamp-2 text-[16px]' : 'text-[18px]'} font-semibold leading-tight`}>{title}</div>
         {sub && <div className="text-[18px] text-ink2">{sub}</div>}
       </div>
     </button>

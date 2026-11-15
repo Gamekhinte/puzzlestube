@@ -54,14 +54,14 @@ export default function App() {
         </Suspense>
       </main>
 
-      <nav className="safe-b flex flex-none border-t border-black/10 bg-[rgba(250,244,234,0.88)] backdrop-blur-md flach:w-[calc(96px+env(safe-area-inset-right,0px))] flach:flex-col flach:border-l flach:border-t-0 flach:pr-[env(safe-area-inset-right,0px)]" aria-label="Bereiche">
+      <nav className="safe-b flex flex-none border-t border-black/10 bg-[#f6eddf] flach:w-[calc(96px+env(safe-area-inset-right,0px))] flach:flex-col flach:border-l flach:border-t-0 flach:pr-[env(safe-area-inset-right,0px)]" aria-label="Bereiche">
         {TABS.map((t) => {
           const on = tab === t.id
           return (
             <button key={t.id} onClick={() => setTab(t.id)} aria-current={on ? 'page' : undefined}
               className={`relative flex min-h-[66px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[16px] leading-tight transition-colors duration-200 flach:text-[14px] ${on ? 'font-bold text-green' : 'font-semibold text-ink2'}`}>
-              <span className={`absolute left-1/2 top-0 h-[4px] w-12 -translate-x-1/2 rounded-b-md bg-green transition-opacity duration-200 flach:left-0 flach:top-1/2 flach:h-12 flach:w-[4px] flach:-translate-y-1/2 flach:translate-x-0 flach:rounded-b-none flach:rounded-r-md ${on ? 'opacity-100' : 'opacity-0'}`} />
-              <span className={`flex h-10 w-14 items-center justify-center rounded-xl transition-colors duration-200 ${on ? 'bg-green/12' : ''}`}><Icon name={t.icon} size={28} /></span>
+              <span className={`absolute left-1/2 top-0 h-[3px] w-10 -translate-x-1/2 bg-green transition-opacity duration-200 flach:left-0 flach:top-1/2 flach:h-10 flach:w-[3px] flach:-translate-y-1/2 flach:translate-x-0 ${on ? 'opacity-100' : 'opacity-0'}`} />
+              <Icon name={t.icon} size={28} />
               <span>{t.label}</span>
             </button>
           )

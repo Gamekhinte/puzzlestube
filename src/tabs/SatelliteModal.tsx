@@ -177,9 +177,9 @@ export function SatelliteModal({ onClose, onSave }: { onClose: () => void; onSav
   const sharp = !!place?.src && z >= DOP_FROM
 
   return (
-    <Modal title="Satellitenbild puzzeln" onClose={onClose} wide>
+    <Modal title="Von oben" onClose={onClose} wide>
       <form className="mb-4 flex gap-3" onSubmit={(e) => { e.preventDefault(); void search() }}>
-        <input className="card min-h-[56px] min-w-0 flex-1 px-4 text-[20px]" placeholder="Ort, Straße oder Region" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Ort suchen" />
+        <input className="card min-h-[56px] min-w-0 flex-1 px-4 text-[20px]" placeholder="Ort oder Straße" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Ort suchen" />
         <button className="btn btn-primary" type="submit" disabled={!!busy}>Suchen</button>
       </form>
       {err && <p className="mb-4 text-[19px] text-danger" role="alert">{err}</p>}
@@ -195,7 +195,7 @@ export function SatelliteModal({ onClose, onSave }: { onClose: () => void; onSav
         <>
           <div
             ref={box}
-            className="relative mb-3 w-full touch-none select-none overflow-hidden rounded-xl bg-[#1d2a33]"
+            className="relative mb-3 w-full touch-none select-none overflow-hidden rounded-[3px] bg-[#1d2a33] shadow-[0_0_0_6px_#fffdf8,0_8px_18px_-8px_rgba(40,24,10,0.6)]"
             style={{ height: h, cursor: 'grab' }}
             onPointerDown={(e) => { (e.target as Element).setPointerCapture?.(e.pointerId); drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY } }}
             onPointerMove={(e) => {
@@ -212,19 +212,14 @@ export function SatelliteModal({ onClose, onSave }: { onClose: () => void; onSav
             {tiles.map((t) => <img key={t.key} src={t.src} alt="" draggable={false} className="absolute max-w-none" style={{ left: t.left, top: t.top, width: t.size, height: t.size }} />)}
           </div>
           <div className="mb-3 flex flex-wrap gap-3">
-            <button className="btn" onClick={() => zoom(-1)} disabled={z <= MIN_Z}><Icon name="zoomout" /><span>Weiter weg</span></button>
-            <button className="btn" onClick={() => zoom(1)} disabled={z >= maxZ}><Icon name="zoomin" /><span>Näher ran</span></button>
-            <button className="btn btn-primary flex-1" onClick={() => void save()} disabled={!!busy}><Icon name="check" /><span>Diesen Ausschnitt puzzeln</span></button>
+            <button className="ibtn" onClick={() => zoom(-1)} disabled={z <= MIN_Z} aria-label="Weiter weg" title="Weiter weg"><Icon name="zoomout" /></button>
+            <button className="ibtn" onClick={() => zoom(1)} disabled={z >= maxZ} aria-label="Näher ran" title="Näher ran"><Icon name="zoomin" /></button>
+            <button className="btn btn-primary flex-1" onClick={() => void save()} disabled={!!busy}><Icon name="puzzle" /><span>Puzzeln</span></button>
           </div>
-          <p className="mb-1 text-[17px] text-ink2">
-            Mit dem Finger verschieben.{' '}
-            {place.src
-              ? 'Hier gibt es scharfe Luftbilder vom Land: näher ran zoomen, dann sieht man einzelne Häuser.'
-              : `${z >= maxZ ? 'Näher geht es nicht. ' : ''}Hier gibt es nur Satellitenfotos: Felder, Wälder, Seen und Städte, aber keine einzelnen Häuser.`}
-          </p>
+
         </>
       )}
-      <p className="text-[15px] text-ink2">Bilder: {SAT_CREDIT}.{sharp ? ` Luftbild: ${place!.src!.credit}.` : ''} Ortssuche: © OpenStreetMap-Mitwirkende.</p>
+      <p className="text-[13px] leading-snug text-ink2">{sharp ? `Luftbild: ${place!.src!.credit}. ` : `Bild: EOxCloudless, Copernicus Sentinel. `}Suche: © OpenStreetMap</p>
       {busy && <p className="mt-3 text-[19px]" role="status">{busy} …</p>}
     </Modal>
   )

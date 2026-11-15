@@ -372,7 +372,7 @@ export class Stage3D {
   private resize() {
     const r = this.canvas.getBoundingClientRect()
     if (r.width < 2 || r.height < 2) return
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1))
+    this.renderer.setPixelRatio(Math.min(this.pieces.length > 60 ? 1.5 : 2, window.devicePixelRatio || 1))
     this.renderer.setSize(r.width, r.height, false)
     this.camera.aspect = r.width / r.height
     this.camera.updateProjectionMatrix()

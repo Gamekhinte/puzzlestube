@@ -67,6 +67,8 @@ export class PuzzleEngine {
   private pinch: { d: number; wx: number; wy: number } | null = null
   private tweens: Tween[] = []
   private glow: { pieces: number[]; t0: number } | null = null
+  private hintGlow: { pieces: number[]; t0: number; fromTray: boolean } | null = null
+  private lastMoved: Group | null = null
   private raf = 0
   private dead = false
   private ro: ResizeObserver
@@ -328,6 +330,27 @@ export class PuzzleEngine {
     this.fitBoard()
     this.report()
     this.opts.onDirty()
+  }
+
+  /** Tipp: zeigt mit goldenem Umriss, wo das zuletzt bewegte Teil hingehört,
+   *  sonst das vorderste Teil aus der Leiste (die Leiste rollt dorthin). */
+  hint() {
+    if (this.done) return
+    let pieces: number[] = [], fromTray = false
+    if (this.lastMoved && this.loose.includes(this.lastMoved)) pieces = this.lastMoved.pieces.slice(0, 60)
+    else {
+      const list = this.trayList()
+      if (list.length) {
+        pieces = [list[0]]; fromTray = true
+        this.trayScroll = 0; this.trayVel = 0
+      } else {
+        const g = this.loose.find((x) => this.visible(x))
+        if (g) pieces = g.pieces.slice(0, 60)
+      }
+    }
+    if (!pieces.length) return
+    this.hintGlow = { pieces, t0: performance.now(), fromTray }
+    this.invalidate()
   }
 
   setEdgesOnly(v: boolean) { this.edgesOnly = v; this.trayScroll = 0; this.trayVel = 0; this.invalidate() }
@@ -599,6 +622,7 @@ export class PuzzleEngine {
         }
       }
     }
+    this.lastMoved = g.locked ? null : g
     if (snapped) {
       this.glow = { pieces: moved.slice(0, 80), t0: performance.now() }
       this.opts.onSnap()
@@ -763,6 +787,32 @@ export class PuzzleEngine {
           ctx.restore()
         }
         ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0
+      }
+    }
+    // Tipp: goldener, pulsierender Umriss am Zielplatz auf dem Brett
+    if (this.hintGlow) {
+      const k = (now - this.hintGlow.t0) / 2800
+      if (k >= 1) this.hintGlow = null
+      else {
+        animating = true
+        const a = (0.55 + 0.45 * Math.sin(k * Math.PI * 7)) * Math.min(1, (1 - k) * 4)
+        ctx.lineJoin = 'round'
+        ctx.fillStyle = `rgba(255,210,90,${0.28 * a})`
+        ctx.strokeStyle = `rgba(214,150,20,${0.95 * a})`
+        ctx.lineWidth = 5 / scale
+        for (const i of this.hintGlow.pieces) {
+          ctx.save()
+          ctx.translate(this.homeX(i), this.homeY(i))
+          ctx.fill(this.paths[i]); ctx.stroke(this.paths[i])
+          ctx.restore()
+        }
+        // das gemeinte Teil in der Leiste golden einrahmen (vorne links)
+        if (this.hintGlow.fromTray && this.trayH) {
+          const ts = this.trayCell, top = this.ch - this.trayH
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          ctx.strokeStyle = `rgba(214,150,20,${0.95 * a})`; ctx.lineWidth = 4
+          ctx.beginPath(); ctx.roundRect(8 + 3 - this.trayScroll, top + 8 + 3, ts - 6, ts - 6, 8); ctx.stroke()
+        }
       }
     }
     if (animating) this.invalidate()

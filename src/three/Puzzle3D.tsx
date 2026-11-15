@@ -64,7 +64,7 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
           if (!stage) return
           const res = stage.tryPlace(piece, x, y)
           if (res === 'ok') {
-            click()
+            click(); try { navigator.vibrate?.(15) } catch { /* nicht überall */ }
             select(null); setMsg('')
             setTray((t) => t.filter((p) => p !== piece))
             const finished = stage.slots.every((s) => s !== null)

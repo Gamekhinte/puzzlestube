@@ -43,12 +43,12 @@ export function ThreeDTab({ onPlay }: { onPlay: (model: string, count: number) =
             {MODELS.filter((m) => m.cat === cat).map((m) => {
               const pct = saved[`${m.id}|${count}`]
               return (
-                <button key={m.id} className="kachel card overflow-hidden p-0 text-left" onClick={() => onPlay(m.id, count)}>
-                  <div className="aspect-[4/3] w-full bg-wood">
+                <button key={m.id} className="kachel abzug text-left" onClick={() => onPlay(m.id, count)}>
+                  <div className="foto aspect-[4/3] w-full !bg-[#efe3d0]">
                     {thumbs[m.id] && <img src={thumbs[m.id]} alt="" className="bild h-full w-full object-contain" draggable={false} onLoad={(e) => e.currentTarget.classList.add('da')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('da') }} />}
                   </div>
-                  <div className="px-3 py-2.5">
-                    <div className="text-[19px] font-bold leading-tight">{m.name}</div>
+                  <div className="px-1 pb-2.5 pt-2">
+                    <div className="text-[18px] font-semibold leading-tight">{m.name}</div>
                     {pct !== undefined && <div className="text-[16px] font-semibold text-green">{pct}%</div>}
                   </div>
                 </button>
