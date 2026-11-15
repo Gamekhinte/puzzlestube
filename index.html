@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#E8D8C3" />
+    <meta name="description" content="Puzzlestube von screame: Puzzles ohne Werbung, mit eigenen Fotos und 3D-Puzzles." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Puzzlestube" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <title>Puzzlestube</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #E8D8C3; }
+      #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #2B2118; }
+      #start img { width: 120px; height: 120px; animation: schrei 1.4s ease-in-out infinite; transform-origin: 30% 50%; }
+      #start b { font-size: 34px; letter-spacing: -0.02em; }
+      #start span { font-size: 20px; color: #5C4A3A; }
+      @keyframes schrei { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+      @media (prefers-reduced-motion: reduce) { #start img { animation: none; } }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div id="start">
+        <img src="screame-logo.svg" alt="screame Logo" />
+        <b>Puzzlestube</b>
+        <span>von screame</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
