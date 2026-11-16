@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react'
-import { MODELS, MODEL_CATS } from '../three/models'
-import { modelThumbs } from '../three/stage'
+import { MODELS, MODEL_CATS, STUFEN, modelThumb } from '../three/models'
 import { type Game3D, all } from '../db'
 
 export function ThreeDTab({ onPlay }: { onPlay: (model: string, count: number) => void }) {
-  const [count, setCount] = useState<number>(() => { try { const n = Number(localStorage.getItem('stufe3d')); return [12, 24, 200].includes(n) ? n : 12 } catch { return 12 } })
-  const [thumbs, setThumbs] = useState<Record<string, string>>({})
+  const [count, setCount] = useState<number>(() => { try { const n = Number(localStorage.getItem('stufe3d')); return STUFEN.some(([s]) => s === n) ? n : 36 } catch { return 36 } })
   const [saved, setSaved] = useState<Record<string, number>>({})
 
   useEffect(() => {
     let live = true
-    const t = setTimeout(() => setThumbs(modelThumbs((r) => { if (live) setThumbs(r) })), 30)
     void all<Game3D>('games3d').then((gs) => {
       const m: Record<string, number> = {}
       for (const g of gs) if (!g.done && g.placed.length) m[g.id] = Math.round((g.placed.length / 2 / g.count) * 100)
       if (live) setSaved(m)
     })
-    return () => { live = false; clearTimeout(t) }
+    return () => { live = false }
   }, [])
 
   const pick = (n: number) => { setCount(n); try { localStorage.setItem('stufe3d', String(n)) } catch { /* egal */ } }
@@ -27,7 +24,7 @@ export function ThreeDTab({ onPlay }: { onPlay: (model: string, count: number) =
 
       <div className="mb-6">
         <div className="grid max-w-2xl grid-cols-3 gap-3" role="radiogroup" aria-label="Schwierigkeit">
-          {[[12, 'Einfach'], [24, 'Mittel'], [200, 'Schwer']].map(([n, label]) => (
+          {STUFEN.map(([n, label]) => (
             <button key={n} role="radio" aria-checked={count === n} className={`btn flex-col !gap-0 !py-3 ${count === n ? 'btn-on' : ''}`} onClick={() => pick(n as number)}>
               <span className="text-[22px] font-bold">{label}</span>
               <span className="text-[18px] font-normal">{n} Teile</span>
@@ -45,7 +42,7 @@ export function ThreeDTab({ onPlay }: { onPlay: (model: string, count: number) =
               return (
                 <button key={m.id} className="kachel abzug text-left" onClick={() => onPlay(m.id, count)}>
                   <div className="foto aspect-[4/3] w-full !bg-[#efe3d0]">
-                    {thumbs[m.id] && <img src={thumbs[m.id]} alt="" className="bild h-full w-full object-contain" draggable={false} onLoad={(e) => e.currentTarget.classList.add('da')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('da') }} />}
+                    {<img src={modelThumb(m.id)} loading="lazy" alt="" className="bild h-full w-full object-contain" draggable={false} onLoad={(e) => e.currentTarget.classList.add('da')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('da') }} />}
                   </div>
                   <div className="px-1 pb-2.5 pt-2">
                     <div className="text-[18px] font-semibold leading-tight">{m.name}</div>

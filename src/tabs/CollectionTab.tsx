@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { type Album, type Game, type Game3D, type Photo, all, del, deleteAlbum, deletePhoto } from '../db'
-import { MODELS } from '../three/models'
-import { modelThumbs } from '../three/stage'
+import { MODELS, modelThumb } from '../three/models'
 import { Bar, Confirm, Icon, Modal } from '../ui/common'
 import { Grid, Tile } from './PuzzlesTab'
 
@@ -17,7 +16,6 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
   const [g3, setG3] = useState<Game3D[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
   const [photos, setPhotos] = useState<Photo[]>([])
-  const [m3, setM3] = useState<Record<string, string>>({})
   const [openAlbum, setOpenAlbum] = useState<Album | null>(null)
   const [ask, setAsk] = useState<{ title: string; text: string; yes: string; run: () => Promise<void> } | null>(null)
   const [ready, setReady] = useState(false)
@@ -29,7 +27,6 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
     setAlbums(a.sort((x, y) => y.createdAt - x.createdAt))
     setPhotos(p.sort((x, y) => x.createdAt - y.createdAt))
     setReady(true)
-    if (t.length) setM3(modelThumbs(setM3))
   }
   useEffect(() => { void reload() }, [])
 
@@ -76,7 +73,7 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
               const pct = Math.round((g.placed.length / 2 / g.count) * 100)
               return (
                 <button key={g.id} className="kachel card flex items-center gap-3 p-3 text-left" onClick={() => onResume3D(g.model, g.count)}>
-                  <div className="h-24 w-28 flex-none rounded-lg border border-black/15 bg-wood">{m3[g.model] && <img src={m3[g.model]} alt="" className="h-full w-full object-contain" draggable={false} />}</div>
+                  <div className="h-24 w-28 flex-none rounded-lg border border-black/15 bg-wood">{<img src={modelThumb(g.model)} alt="" className="h-full w-full object-contain" draggable={false} />}</div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[19px] font-bold">{name3(g.model)} (3D)</div>
                     <div className="mb-1.5 text-[16px] text-ink2">{g.count} Teile · {pct}%</div>
@@ -99,7 +96,7 @@ export function CollectionTab({ onResume, onPick, onResume3D, goPuzzles }: Props
             ))}
             {finished3.map((g) => (
               <button key={g.id} className="card relative overflow-hidden p-0 text-left" onClick={() => onResume3D(g.model, g.count)}>
-                <div className="aspect-[4/3] w-full bg-wood">{m3[g.model] && <img src={m3[g.model]} alt="" className="h-full w-full object-contain" draggable={false} />}</div>
+                <div className="aspect-[4/3] w-full bg-wood">{<img src={modelThumb(g.model)} alt="" className="h-full w-full object-contain" draggable={false} />}</div>
                 <span className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-lg bg-white text-gold"><Icon name="trophy" /></span>
                 <div className="px-3 py-2.5">
                   <div className="truncate text-[19px] font-bold">{name3(g.model)} (3D)</div>

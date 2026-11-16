@@ -1,7 +1,7 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { readdirSync } from 'node:fs'
+import { readdirSync, writeFileSync } from 'node:fs'
 
 // Schreibt beim Build einen kleinen Service Worker mit der Liste aller Dateien,
 // damit die App nach dem ersten Laden komplett offline läuft.
@@ -13,7 +13,7 @@ function offlinePlugin(): Plugin {
       const files = Object.keys(bundle).filter((f) => !f.endsWith('.map'))
       // alles aus public gehört dazu, von den Galeriefotos aber nur die kleinen Vorschauen.
       // Die großen Fotos kommen erst in den Speicher, wenn man sie einmal geöffnet hat.
-      const extra = ['./', ...(readdirSync('public', { recursive: true, withFileTypes: true }).filter((d) => d.isFile()).map((d) => `${d.parentPath}/${d.name}`.split('\\').join('/').replace(/^public\//, '')).filter((f) => !f.startsWith('galerie/') || f.endsWith('-k.jpg')))]
+      const extra = ['./', ...(readdirSync('public', { recursive: true, withFileTypes: true }).filter((d) => d.isFile()).map((d) => `${d.parentPath}/${d.name}`.split('\\').join('/').replace(/^public\//, '')).filter((f) => (!f.startsWith('galerie/') || f.endsWith('-k.jpg')) && !f.endsWith('.glb')))]
       const version = Date.now().toString(36)
       const source = `const CACHE = 'puzzlestube-${version}';
 const FILES = ${JSON.stringify([...extra, ...files])};
@@ -51,9 +51,26 @@ self.addEventListener('fetch', (e) => {
   }
 }
 
+// Nur beim Entwickeln: nimmt die im Browser gerenderten 3D-Vorschaubilder an (siehe main.tsx).
+function previewSaver(): Plugin {
+  return {
+    name: 'puzzlestube-vorschau',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__vorschau/', (req, res) => {
+        const id = (req.url || '').replace(/^\//, '')
+        if (req.method !== 'POST' || !/^[\w-]+$/.test(id)) { res.statusCode = 400; res.end(); return }
+        const chunks: Buffer[] = []
+        req.on('data', (c: Buffer) => chunks.push(c))
+        req.on('end', () => { writeFileSync(`${server.config.publicDir}/modelle/${id}.webp`, Buffer.concat(chunks)); res.end('ok') })
+      })
+    },
+  }
+}
+
 export default defineConfig({
   base: './',
-  plugins: [react(), tailwindcss(), offlinePlugin()],
+  plugins: [react(), tailwindcss(), offlinePlugin(), previewSaver()],
   server: { port: 5183, strictPort: true },
   build: { chunkSizeWarningLimit: 1200 },
 })

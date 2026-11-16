@@ -21,6 +21,18 @@ document.addEventListener('dblclick', (e) => e.preventDefault())
 // Zoomen mit zwei Fingern nur im Puzzle selbst, nicht für die ganze Seite
 document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && e.cancelable) e.preventDefault() }, { passive: false })
 
+// Nur beim Entwickeln: ?vorschauBauen rendert alle 3D-Vorschaubilder neu und legt sie in public/modelle ab.
+if (import.meta.env.DEV && location.search.includes('vorschauBauen')) {
+  void (async () => {
+    const [{ MODELS }, { renderPreview }] = await Promise.all([import('./three/models'), import('./three/stage')])
+    for (const m of MODELS) {
+      const blob = await renderPreview(m.id)
+      if (blob) await fetch(`/__vorschau/${m.id}`, { method: 'POST', body: blob })
+    }
+    document.title = 'Vorschau fertig'
+  })()
+}
+
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => { void navigator.serviceWorker.register('sw.js').then((r) => r.update()).catch(() => {}) })
   // Nach einem Update übernimmt der neue Service Worker: einmal neu laden, damit alles zusammenpasst.

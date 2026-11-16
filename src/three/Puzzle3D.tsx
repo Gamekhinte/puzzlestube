@@ -31,7 +31,8 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
   const freshRef = useRef(false)
   const model = MODELS.find((m) => m.id === modelId) ?? MODELS[0]
   const id = `${model.id}|${count}`
-  const total = count
+  // echte Teilezahl kann um ein, zwei Teile abweichen (sehr kleine Reste fallen weg)
+  const [total, setTotal] = useState(count)
 
   const select = (p: number | null) => { selRef.current = p; setSel(p) }
 
@@ -45,16 +46,19 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
         freshRef.current = false
         await new Promise((r) => setTimeout(r, 40))
         if (dead || !canvasRef.current) return
-        stage = await Stage3D.create(canvasRef.current, model.build(count))
+        stage = await Stage3D.create(canvasRef.current, model.id, count)
         if (dead) { stage.dispose(); stage = null; return }
         const n = stage.count
+        setTotal(n)
         stageRef.current = stage
+        if (import.meta.env.DEV) (window as unknown as { __stage: Stage3D }).__stage = stage
         setSheet(stage.thumbs(n > 60 ? 112 : 180))
         const placed = old && !old.done ? old.placed : []
         for (let i = 0; i + 1 < placed.length; i += 2) if (placed[i] < n && placed[i] === placed[i + 1]) stage.fill(placed[i], placed[i], false)
         const used = new Set(stage.slots.filter((s): s is number => s !== null))
         const order = Array.from({ length: n }, (_, i) => i).filter((i) => !used.has(i))
         const r = rng(count * 7919 + model.id.length * 131 + round)
+        await new Promise((ok) => setTimeout(ok, 0))
         for (let i = order.length - 1; i > 0; i--) { const j = (r() * (i + 1)) | 0; [order[i], order[j]] = [order[j], order[i]] }
         setTray(order)
 
