@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+﻿import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { readdirSync, writeFileSync } from 'node:fs'
@@ -72,5 +72,7 @@ export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss(), offlinePlugin(), previewSaver()],
   server: { port: 5183, strictPort: true },
-  build: { chunkSizeWarningLimit: 1200 },
+  // Programm auch für ältere iPads (Safari 14/15) umrechnen, z. B. die static-Blöcke von three.js.
+  // Das CSS bleibt modern: Tailwind 4 umzurechnen hat auf dem iPad eine weiße Seite ergeben.
+  build: { chunkSizeWarningLimit: 1200, target: ['es2020', 'safari14'], cssTarget: ['chrome111', 'safari16.4', 'firefox128'] },
 })
