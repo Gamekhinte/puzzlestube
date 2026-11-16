@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { CATEGORIES, GALLERY, galleryThumb } from '../gallery'
-import { type Album, type Game, type Photo, addCanvasPhoto, addPhotos, all, deleteAlbum, deletePhoto, keepStorage, put, uid } from '../db'
-import { DOP, SAT_CREDIT, SatelliteModal } from './SatelliteModal'
+import { type Album, type Game, type Photo, addPhotos, all, deleteAlbum, deletePhoto, keepStorage, put, uid } from '../db'
 import { Bar, Confirm, Icon, Loading, Logo, Modal } from '../ui/common'
 
 export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => void; onResume: (g: Game) => void }) {
   const [credits, setCredits] = useState(false)
-  const [sat, setSat] = useState(false)
   const [albums, setAlbums] = useState<Album[]>([])
   const [photos, setPhotos] = useState<Photo[]>([])
   const [busy, setBusy] = useState('')
@@ -54,15 +52,6 @@ export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => 
     if (input.current) input.current.value = ''
   }
 
-  const saveSat = async (cv: HTMLCanvasElement, name: string) => {
-    keepStorage()
-    if (!albums.some((a) => a.id === 'satellit')) await put('albums', { id: 'satellit', name: 'Satellitenbilder', createdAt: Date.now() } satisfies Album)
-    const id = await addCanvasPhoto(cv, name, 'satellit')
-    await reload()
-    setSat(false)
-    onPick(id)
-  }
-
   // Bild des Tages: jeden Tag ein anderes aus der Galerie
   const today = GALLERY[Math.floor(Date.now() / 86400000) % GALLERY.length]
 
@@ -102,12 +91,9 @@ export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => 
         </button>
       )}
 
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:flex">
-        <button className="btn btn-primary !min-h-[58px] !text-[18px]" onClick={() => input.current?.click()}>
+      <div className="mb-8 flex">
+        <button className="btn btn-primary !min-h-[58px] w-full !text-[18px] sm:w-auto" onClick={() => input.current?.click()}>
           <Icon name="plus" size={24} /><span>Eigenes Foto</span>
-        </button>
-        <button className="btn !min-h-[58px] !text-[18px]" onClick={() => setSat(true)}>
-          <Icon name="globe" size={24} /><span>Von oben</span>
         </button>
       </div>
       <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={(e) => void upload(e.target.files)} />
@@ -120,7 +106,7 @@ export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => 
         return (
           <section key={a.id} className="mb-8">
             <div className="mb-3 flex items-center gap-3">
-              <h2 className="h2 flex min-w-0 flex-1 items-center gap-2 truncate"><Icon name={a.id === 'satellit' ? 'globe' : 'photos'} />{a.name}</h2>
+              <h2 className="h2 flex min-w-0 flex-1 items-center gap-2 truncate"><Icon name="photos" />{a.name}</h2>
               <button className={`ibtn ${editing ? 'an' : ''}`} onClick={() => setEdit(editing ? null : a.id)} aria-label={editing ? 'Fertig mit Löschen' : `Bilder aus ${a.name} löschen`} title={editing ? 'Fertig' : 'Löschen'}>
                 <Icon name={editing ? 'check' : 'trash'} />
               </button>
@@ -172,19 +158,13 @@ export function PuzzlesTab({ onPick, onResume }: { onPick: (imageId: string) => 
       <button className="mt-2 min-h-[44px] px-1 text-[16px] text-ink2 underline underline-offset-4" onClick={() => setCredits(true)}>Bildnachweis</button>
       {credits && (
         <Modal title="Bildnachweis" onClose={() => setCredits(false)}>
-          <p className="mb-3 text-[19px]">Alle mitgelieferten Fotos stammen aus Wikimedia Commons und sind gemeinfrei (Public Domain oder CC0). Danke an die Fotografinnen und Fotografen.</p>
-          <ul className="flex flex-col gap-2 text-[18px]">
-            {GALLERY.map((g) => <li key={g.id}><b>{g.title}:</b> {g.author}, {g.license === 'CC0' ? 'CC0' : 'gemeinfrei'}</li>)}
-          </ul>
-          <p className="mt-4 text-[18px]"><b>Satellitenbilder:</b> {SAT_CREDIT}. Nur für private, nicht kommerzielle Nutzung.</p>
-          <p className="mt-2 text-[18px]"><b>Luftbilder der Länder:</b> {Object.entries(DOP).map(([land, s]) => `${land}: ${s.credit}`).join('; ')}.</p>
+          <p className="text-[19px]">Alle {GALLERY.length} mitgelieferten Fotos sind eigene Aufnahmen der Familie. Die Rechte liegen bei den Fotografen, Weitergabe nur mit Erlaubnis.</p>
         </Modal>
       )}
       {ask && (
         <Confirm title={ask.title} text={ask.text} yes="Ja, löschen" onNo={() => setAsk(null)}
           onYes={async () => { const x = ask; setAsk(null); await x.run(); await reload() }} />
       )}
-      {sat && <SatelliteModal onClose={() => setSat(false)} onSave={saveSat} />}
       {busy && <div className="fixed inset-0 z-50"><Loading text={busy} /></div>}
     </div>
   )

@@ -90,7 +90,7 @@ export async function addPhotos(files: File[], albumId: string): Promise<number>
   return failed
 }
 
-/** Speichert ein fertiges Bild (z. B. Satellitenbild) als eigenes Foto und gibt die ID zurück. */
+/** Speichert ein fertiges Bild als eigenes Foto und gibt die ID zurück. */
 export async function addCanvasPhoto(cv: HTMLCanvasElement, name: string, albumId: string): Promise<string> {
   const blob = await new Promise<Blob>((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('leer'))), 'image/jpeg', 0.9))
   const photo: Photo = { id: 'u:' + uid(), albumId, name, blob, thumb: shrink(cv, 480).toDataURL('image/jpeg', 0.8), createdAt: Date.now() }
@@ -129,5 +129,5 @@ export function keepStorage() {
 
 /** Räumt Spielstände weg, deren Galeriebild es nicht mehr gibt (z. B. die früheren gezeichneten Motive). */
 export async function cleanOldGames() {
-  for (const g of await all<Game>('games')) if (g.imageId.startsWith('g:') && !GALLERY.some((x) => x.id === g.imageId)) await del('games', g.id)
+  for (const g of await all<Game>('games')) if (/^[gf]:/.test(g.imageId) && !GALLERY.some((x) => x.id === g.imageId)) await del('games', g.id)
 }
