@@ -86,6 +86,8 @@ export class PuzzleEngine {
   private last = { x: 0, y: 0 }
   showPreview = false
   edgesOnly = false
+  /** nur das Brett mit den gelegten Teilen zeigen (ohne lose Teile und Leiste) */
+  boardOnly = false
 
   constructor(private canvas: HTMLCanvasElement, source: HTMLCanvasElement, private opts: EngineOptions) {
     this.ctx = canvas.getContext('2d')!
@@ -299,11 +301,11 @@ export class PuzzleEngine {
     this.tray = order
   }
 
-  private visible(g: Group) { return !this.edgesOnly || g.hasEdge || g.locked }
+  private visible(g: Group) { return this.boardOnly ? !!g.locked : !this.edgesOnly || g.hasEdge || g.locked }
 
   /** Höhe der Leiste in Bildschirmpunkten. Ist sie leer, verschwindet sie. */
   private get trayH() {
-    if (!this.tray.length || this.done) return 0
+    if (!this.tray.length || this.done || this.boardOnly) return 0
     return this.ch < 430 ? 112 : Math.round(Math.max(176, Math.min(260, this.ch * 0.3)))
   }
   private get trayRows() { return this.ch < 430 ? 1 : 2 }
@@ -335,7 +337,7 @@ export class PuzzleEngine {
   /** Tipp: zeigt mit goldenem Umriss, wo das zuletzt bewegte Teil hingehört,
    *  sonst das vorderste Teil aus der Leiste (die Leiste rollt dorthin). */
   hint() {
-    if (this.done) return
+    if (this.done || this.boardOnly) return
     let pieces: number[] = [], fromTray = false
     if (this.lastMoved && this.loose.includes(this.lastMoved)) pieces = this.lastMoved.pieces.slice(0, 60)
     else {
@@ -355,6 +357,7 @@ export class PuzzleEngine {
 
   setEdgesOnly(v: boolean) { this.edgesOnly = v; this.trayScroll = 0; this.trayVel = 0; this.invalidate() }
   setPreview(v: boolean) { this.showPreview = v; this.invalidate() }
+  setBoardOnly(v: boolean) { this.finishTweens(); this.drag = null; this.boardOnly = v; this.stillDirty = true; this.fitBoard() }
 
   // ---------- Kamera ----------
 
@@ -369,6 +372,7 @@ export class PuzzleEngine {
     this.canvas.width = Math.round(r.width * this.dpr)
     this.canvas.height = Math.round(r.height * this.dpr)
     if (!first) { this.tx = this.cw / 2 - cxw * this.scale; this.ty = this.ch / 2 - cyw * this.scale }
+    if (this.boardOnly) this.fitBoard()
     this.invalidate()
   }
 

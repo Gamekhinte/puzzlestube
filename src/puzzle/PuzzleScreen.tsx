@@ -17,6 +17,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
   const [showDone, setShowDone] = useState(false)
   const [preview, setPreview] = useState(false)
   const [edges, setEdges] = useState(false)
+  const [board, setBoard] = useState(false)
   const [menu, setMenu] = useState(false)
   const [askRestart, setAskRestart] = useState(false)
   const [sound, setSnd] = useState(soundOn())
@@ -104,7 +105,11 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
   return (
     <div className="einblenden tisch fixed inset-0 flex flex-col">
       {/* schlanke Kopfzeile direkt auf dem Holz, Werkzeuge nur als Icons */}
-      <header className="safe-t z-10">
+      {/* "Nur das Brett": alles andere weg, nur ein kleines X zum Zurückkommen */}
+      {board && (
+        <button className="ibtn safe-t absolute right-2 top-2 z-20 !h-11 !min-h-0 !w-11 !min-w-0" onClick={() => { setBoard(false); eng?.setBoardOnly(false) }} aria-label="Zurück zum Puzzeln" title="Zurück zum Puzzeln"><Icon name="close" size={20} /></button>
+      )}
+      <header className={`safe-t z-10 ${board ? 'hidden' : ''}`}>
         <div className="flex items-center gap-2 px-2 pb-1 pt-2">
           <button className="ibtn" onClick={() => onExit()} aria-label="Zurück" title="Zurück"><Icon name="back" /></button>
           <div className="min-w-0 flex-1 px-1">
@@ -120,7 +125,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
 
       <div className="relative min-h-0 flex-1">
         <canvas ref={canvasRef} className="no-touch absolute inset-0 h-full w-full" aria-label="Puzzlefläche" />
-        {!loading && !error && (
+        {!loading && !error && !board && (
           <div className="absolute right-2 top-2 flex flex-col gap-2">
             <button className="ibtn tipp" onClick={() => eng?.hint()} aria-label="Tipp: wo gehört das Teil hin" title="Tipp"><Icon name="bulb" /></button>
             <button className="ibtn" onClick={() => eng?.zoomBy(1.4)} aria-label="Größer" title="Größer"><Icon name="zoomin" /></button>
@@ -153,7 +158,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
             <button className="btn justify-start" onClick={() => { const v = !sound; setSound(v); setSnd(v); if (v) click() }}>
               <Icon name={sound ? 'sound' : 'mute'} /><span>{sound ? 'Ton ist an' : 'Ton ist aus'}</span>
             </button>
-            <button className="btn justify-start" onClick={() => { setMenu(false); eng?.fitBoard() }}>
+            <button className="btn justify-start" onClick={() => { setMenu(false); setBoard(true); eng?.setBoardOnly(true) }}>
               <Icon name="fit" /><span>Nur das Brett zeigen</span>
             </button>
             <button className="btn btn-danger justify-start" onClick={() => setAskRestart(true)}>
