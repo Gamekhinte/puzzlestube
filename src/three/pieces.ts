@@ -124,9 +124,13 @@ export async function buildPieces(S: Soup, lab: Int32Array, n: number): Promise<
     solid.visible = false
 
     // Platzhalter: gleiche Form in hellem Ton mit dunklem Umriss
-    const gGeo = outer.clone()
+    // teilt sich Lage, Richtung und uv mit dem Außenteil (kein doppelter Speicher), nur die Farben sind eigene
+    const gGeo = new THREE.BufferGeometry()
+    gGeo.setAttribute('position', outer.attributes.position)
+    gGeo.setAttribute('normal', outer.attributes.normal)
+    gGeo.setAttribute('uv', outer.attributes.uv)
     gGeo.setAttribute('color', new THREE.BufferAttribute(colG, 3))
-    gGeo.clearGroups()
+    gGeo.boundingSphere = outer.boundingSphere
     const ghostMat = new THREE.MeshStandardMaterial({ color: 0x8a8174, vertexColors: true, roughness: 0.95, envMapIntensity: 0.5, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
     const ghost = new THREE.Mesh(gGeo, ghostMat)
 

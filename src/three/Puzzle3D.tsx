@@ -24,6 +24,7 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
   const [bad, setBad] = useState(0)
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [step, setStep] = useState('')
   const [error, setError] = useState('')
   const [drag, setDrag] = useState<{ piece: number; x: number; y: number } | null>(null)
   const [ask, setAsk] = useState(false)
@@ -46,7 +47,7 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
         freshRef.current = false
         await new Promise((r) => setTimeout(r, 40))
         if (dead || !canvasRef.current) return
-        stage = await Stage3D.create(canvasRef.current, model.id, count)
+        stage = await Stage3D.create(canvasRef.current, model.id, count, (t) => { if (!dead) setStep(t) })
         if (dead) { stage.dispose(); stage = null; return }
         const n = stage.count
         setTotal(n)
@@ -147,7 +148,7 @@ export function Puzzle3D({ modelId, count, onExit }: Props) {
         {hintText && !loading && !error && (
           <div key={bad} className={`pointer-events-none absolute left-1/2 top-2 max-w-[90%] -translate-x-1/2 rounded-xl bg-white/90 px-4 py-2 text-center text-[18px] shadow-sm ${msg && bad ? 'wackel' : ''}`} role="status">{hintText}</div>
         )}
-        {loading && <Loading text="Dein 3D-Puzzle wird vorbereitet" />}
+        {loading && <Loading text={step || 'Dein 3D-Puzzle wird vorbereitet'} />}
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
             <div className="h2">{error}</div>

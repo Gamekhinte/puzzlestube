@@ -72,5 +72,6 @@ export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss(), offlinePlugin(), previewSaver()],
   server: { port: 5183, strictPort: true },
-  build: { chunkSizeWarningLimit: 1200 },
+  // auch ältere iPads und iPhones (Safari 14) sollen die Programmdateien verstehen
+  build: { chunkSizeWarningLimit: 1200, target: ['es2020', 'safari14'] },
 })

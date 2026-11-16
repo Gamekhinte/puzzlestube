@@ -43,13 +43,22 @@ function look(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
 const tick = () => new Promise((r) => setTimeout(r, 0))
 
 /** Lädt das Modell und schneidet es in etwa `count` Teile (gleiche Eingabe ergibt dieselben Teile). */
-async function cutModel(modelId: string, count: number, seed: number) {
+export type Step = (text: string) => void
+
+async function cutModel(modelId: string, count: number, seed: number, step: Step) {
+  step('Modell wird geladen')
   const scene = await loadModel(modelFile(modelId))
   await tick()
+  step('Teile werden geschnitten')
+  await tick()
   const S = soupOf(scene)
-  await refine(S, count <= 40 ? 12000 : count <= 120 ? 22000 : 32000)
+  // auf Tablets und Handys etwas gröber, das spart Zeit und Speicher (die Nasen bleiben rund)
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+  const k = touch ? 0.8 : 1
+  await refine(S, (count <= 40 ? 12000 : count <= 120 ? 22000 : 32000) * k)
   // Raster wie bei einem echten Puzzle: 6 Würfelseiten mit gleich großen Feldern
   const cutUp = await jigsaw(S, null, null, seed + count, { target: count })
+  step('Teile werden gebaut')
   await tick()
   return await buildPieces(cutUp.S, cutUp.lab, cutUp.n)
 }
@@ -95,8 +104,9 @@ export class Stage3D {
   onTap: (x: number, y: number) => void = () => {}
 
   /** Baut die Teile in Häppchen (die Seite bleibt bedienbar) und erstellt dann die Bühne. */
-  static async create(canvas: HTMLCanvasElement, modelId: string, count: number, seed = 7): Promise<Stage3D> {
-    const st = new Stage3D(canvas, await cutModel(modelId, count, seed))
+  static async create(canvas: HTMLCanvasElement, modelId: string, count: number, step: Step = () => {}, seed = 7): Promise<Stage3D> {
+    const st = new Stage3D(canvas, await cutModel(modelId, count, seed, step))
+    step('Fast fertig')
     await st.prepare()
     return st
   }
@@ -134,7 +144,11 @@ export class Stage3D {
   private async prepare() {
     const vis = this.pieces.map((p) => p.solid.visible)
     for (const p of this.pieces) p.solid.visible = true
-    try { await this.renderer.compileAsync(this.scene, this.camera) } catch { /* egal */ }
+    // Safari auf iPad und iPhone meldet "fertig übersetzt" manchmal nie. Deshalb höchstens 1,5 s warten,
+    // danach geht es auf jeden Fall weiter (der Rest wird dann beim ersten Bild übersetzt).
+    try {
+      await Promise.race([this.renderer.compileAsync(this.scene, this.camera), new Promise((r) => setTimeout(r, 1500))])
+    } catch { /* egal */ }
     this.pieces.forEach((p, i) => { p.solid.visible = vis[i] })
     const done = new Set<THREE.Texture>()
     for (const p of this.pieces) p.solid.traverse((o) => {
