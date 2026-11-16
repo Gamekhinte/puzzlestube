@@ -18,6 +18,10 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
   const [preview, setPreview] = useState(false)
   const [edges, setEdges] = useState(false)
   const [board, setBoard] = useState(false)
+  // Bild festhalten ist von selbst an, damit man beim Danebentippen nicht dauernd das ganze Bild verschiebt
+  const [lock, setLock] = useState(true)
+  const lockRef = useRef(true)
+  lockRef.current = lock
   const [menu, setMenu] = useState(false)
   const [askRestart, setAskRestart] = useState(false)
   const [sound, setSnd] = useState(soundOn())
@@ -74,6 +78,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
           onDirty: () => { if (!timer) timer = window.setTimeout(save, 400) },
         })
         first = false
+        engine.setLocked(lockRef.current)
         engineRef.current = engine
         if (import.meta.env.DEV) (window as unknown as { __eng: PuzzleEngine }).__eng = engine // nur zum Testen
         save()
@@ -131,6 +136,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
             <button className="ibtn" onClick={() => eng?.zoomBy(1.4)} aria-label="Größer" title="Größer"><Icon name="zoomin" /></button>
             <button className="ibtn" onClick={() => eng?.zoomBy(1 / 1.4)} aria-label="Kleiner" title="Kleiner"><Icon name="zoomout" /></button>
             <button className="ibtn" onClick={() => eng?.fitAll()} aria-label="Alles zeigen" title="Alles zeigen"><Icon name="fit" /></button>
+            <button className={`ibtn ${lock ? 'an' : ''}`} aria-pressed={lock} aria-label="Bild festhalten" title={lock ? 'Bild ist festgehalten' : 'Bild lässt sich verschieben'} onClick={() => { const v = !lock; setLock(v); eng?.setLocked(v) }}><Icon name={lock ? 'lock' : 'unlock'} /></button>
           </div>
         )}
         {loading && <Loading text="Dein Puzzle wird vorbereitet" />}

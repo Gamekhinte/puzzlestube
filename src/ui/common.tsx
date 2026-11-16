@@ -21,6 +21,8 @@ const P: Record<string, ReactNode> = {
   reset: <><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5" /><path d="M4.5 4.5v4.2h4.2" /></>,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  lock: <><rect x="5" y="10.5" width="14" height="10" rx="1.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></>,
+  unlock: <><rect x="5" y="10.5" width="14" height="10" rx="1.5" /><path d="M8 10.5V7.5a4 4 0 0 1 7.6-1.7" /></>,
   globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.5 3.5 8.5s-1 5.9-3.5 8.5M12 3.5C9.5 6.1 8.5 9 8.5 12s1 5.9 3.5 8.5" /></>,
   photos: <><rect x="3.5" y="6.5" width="14" height="13" rx="1.5" /><path d="M7 6.5V4.5h13.5V16H17.5M3.5 16l4.5-4 3.5 3 2.5-2 3.5 3" /></>,
 }

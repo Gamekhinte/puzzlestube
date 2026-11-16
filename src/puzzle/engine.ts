@@ -88,6 +88,8 @@ export class PuzzleEngine {
   edgesOnly = false
   /** nur das Brett mit den gelegten Teilen zeigen (ohne lose Teile und Leiste) */
   boardOnly = false
+  /** Brett festhalten: ein Finger auf leerer Fläche schiebt das Bild nicht weg (Zoomen mit zwei Fingern geht weiter) */
+  locked = true
 
   constructor(private canvas: HTMLCanvasElement, source: HTMLCanvasElement, private opts: EngineOptions) {
     this.ctx = canvas.getContext('2d')!
@@ -96,9 +98,15 @@ export class PuzzleEngine {
     this.rows = opts.rows
     this.total = this.cols * this.rows
     // Arbeitsgröße: bei vielen Teilen etwas größer, damit jedes Teil scharf bleibt.
+    // Kleine oder schlechte Fotos werden dafür auch hochgerechnet: das Bild wird davon nicht schärfer,
+    // aber Umriss, Kante und Schatten der Teile bleiben sauber statt verwaschen.
     const small = Math.max(screen.width, screen.height) <= 950
     const maxDim = small ? 1500 : this.total >= 400 ? 2000 : 1600
-    const s = Math.min(1, maxDim / Math.max(source.width, source.height))
+    const budget = small ? 2.6e6 : 4e6 // Bildpunkte der Arbeitsfläche, damit der Speicher reicht
+    let s = maxDim / Math.max(source.width, source.height)
+    const piece = Math.min((source.width * s) / this.cols, (source.height * s) / this.rows)
+    if (piece < 120) s *= 120 / piece
+    s = Math.min(s, Math.sqrt(budget / (source.width * source.height)))
     this.W = Math.round(source.width * s)
     this.H = Math.round(source.height * s)
     this.img = document.createElement('canvas')
@@ -357,6 +365,7 @@ export class PuzzleEngine {
 
   setEdgesOnly(v: boolean) { this.edgesOnly = v; this.trayScroll = 0; this.trayVel = 0; this.invalidate() }
   setPreview(v: boolean) { this.showPreview = v; this.invalidate() }
+  setLocked(v: boolean) { this.locked = v; if (v) this.pan = null }
   setBoardOnly(v: boolean) { this.finishTweens(); this.drag = null; this.boardOnly = v; this.stillDirty = true; this.fitBoard() }
 
   // ---------- Kamera ----------
@@ -462,7 +471,7 @@ export class PuzzleEngine {
         const n = this.loose.indexOf(g)
         this.loose.splice(n, 1); this.loose.push(g)
         this.drag = { g, ox: wx - g.dx, oy: wy - g.dy, id: e.pointerId }
-      } else {
+      } else if (!this.locked) {
         this.pan = { id: e.pointerId, x: p.x, y: p.y }
       }
     } else if (this.pointers.size === 2) {
@@ -546,7 +555,7 @@ export class PuzzleEngine {
     if (this.pinch && this.pointers.size < 2) {
       this.pinch = null
       const rest = [...this.pointers.entries()][0]
-      if (rest) this.pan = { id: rest[0], x: rest[1].x, y: rest[1].y }
+      if (rest && !this.locked) this.pan = { id: rest[0], x: rest[1].x, y: rest[1].y }
     }
     this.invalidate()
   }
@@ -727,11 +736,29 @@ export class PuzzleEngine {
     // sichtbarer Ausschnitt in Weltkoordinaten
     const vx0 = -this.tx / scale - this.pw - this.mx, vy0 = -this.ty / scale - this.ph - this.my
     const vx1 = (this.cw - this.tx) / scale + this.mx, vy1 = (this.ch - this.ty) / scale + this.my
-    const group = (c: CanvasRenderingContext2D, g: Group) => {
+    // Groß gezoomt werden die Teilbilder hochgerechnet und ihr Umriss wird weich.
+    // Dann den Umriss zusätzlich frisch nachziehen, das bleibt bei jeder Größe scharf.
+    // Nur wenn wenige Teile im Bild sind, damit es flüssig bleibt.
+    const crisp = scale * dpr > 1.25 && ((vx1 - vx0) * (vy1 - vy0)) / (this.pw * this.ph) < 320
+    const outline = (c: CanvasRenderingContext2D, i: number, x: number, y: number, w: number, col: string) => {
+      c.translate(x, y); c.lineWidth = w; c.strokeStyle = col; c.stroke(this.paths[i]); c.translate(-x, -y)
+    }
+    const group = (c: CanvasRenderingContext2D, g: Group, lines = crisp) => {
+      if (lines) c.lineJoin = 'round'
       for (const i of g.pieces) {
         const x = this.homeX(i) + g.dx, y = this.homeY(i) + g.dy
         if (x < vx0 || y < vy0 || x > vx1 || y > vy1) continue
         c.drawImage(this.sprites[i], x - this.mx, y - this.my)
+        if (lines) outline(c, i, x, y, this.lineW * 0.9, 'rgba(30,20,12,0.45)')
+      }
+    }
+    const lockedLines = (c: CanvasRenderingContext2D) => {
+      if (!crisp) return
+      c.lineJoin = 'round'
+      for (const i of this.lockedGroup.pieces) {
+        const x = this.homeX(i), y = this.homeY(i)
+        if (x < vx0 || y < vy0 || x > vx1 || y > vy1) continue
+        outline(c, i, x, y, this.lineW * 0.8, 'rgba(20,12,6,0.32)')
       }
     }
     const scene = (c: CanvasRenderingContext2D, skip?: Group) => {
@@ -747,6 +774,7 @@ export class PuzzleEngine {
       c.fillRect(0, 0, this.W, this.H)
       if (this.showPreview) { c.globalAlpha = 0.32; c.drawImage(this.img, 0, 0); c.globalAlpha = 1 }
       c.drawImage(this.lockedLayer, 0, 0)
+      lockedLines(c)
       for (const g of this.loose) if (g !== skip && this.visible(g)) group(c, g)
     }
 
@@ -764,8 +792,12 @@ export class PuzzleEngine {
       world(ctx)
       ctx.imageSmoothingQuality = 'low'
       if (dragG.pieces.length <= 40) { ctx.shadowColor = 'rgba(40,25,10,0.4)'; ctx.shadowBlur = 16 * dpr; ctx.shadowOffsetY = 8 * dpr }
-      group(ctx, dragG)
+      group(ctx, dragG, false)
       ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0
+      if (crisp) {
+        ctx.lineJoin = 'round'
+        for (const i of dragG.pieces) outline(ctx, i, this.homeX(i) + dragG.dx, this.homeY(i) + dragG.dy, this.lineW * 0.9, 'rgba(30,20,12,0.45)')
+      }
     } else {
       scene(ctx)
       trayDraw(ctx)
