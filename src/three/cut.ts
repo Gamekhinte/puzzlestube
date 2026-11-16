@@ -29,7 +29,7 @@ export function loadModel(url: string): Promise<THREE.Group> {
   return p
 }
 
-const tick = () => new Promise((r) => setTimeout(r, 0))
+export const tick = () => new Promise((r) => setTimeout(r, 0))
 
 /** Alle Dreiecke des Modells, auf Radius R um den Ursprung gebracht. */
 export function soupOf(scene: THREE.Group, R = 1.3): Soup {
@@ -107,7 +107,7 @@ export function faceNormal(S: Soup, f: number): THREE.Vector3 {
   corner(S, f, 0, A); corner(S, f, 1, B); corner(S, f, 2, C)
   return B.sub(A).cross(C.sub(A)).clone()
 }
-const dist = (P: number[], a: number, b: number) => Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2])
+export const dist = (P: number[], a: number, b: number) => Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2])
 
 /** Teilt lange Kanten (überall gleich, damit keine Lücken entstehen), bis die Fläche aus etwa `target` Dreiecken besteht. */
 export async function refine(S: Soup, target: number) {
@@ -194,8 +194,8 @@ class Heap {
   get size() { return this.k.length }
 }
 
-/** Ordnet jedem Dreieck eine Teilnummer 0..n-1 zu. */
-export async function partition(S: Soup, n: number, seed: number): Promise<Int32Array> {
+/** Verteilt n Startpunkte und ordnet jedem Punkt der Fläche das nächste Teil zu (kürzester Weg über die Fläche). */
+export async function partition(S: Soup, n: number, seed: number): Promise<{ vlab: Int32Array; seeds: number[] }> {
   const V = S.P.length / 3, P = S.P
   // Nachbarn über Dreieckskanten
   const nb: number[][] = Array.from({ length: V }, () => [])
@@ -271,64 +271,5 @@ export async function partition(S: Soup, n: number, seed: number): Promise<Int32
       if (dd < bestD[l]) { bestD[l] = dd; seeds[l] = i }
     }
   }
-  // Dreieck gehört dem Teil, dem die Mehrheit seiner Ecken gehört
-  const out = new Int32Array(S.mat.length)
-  for (let f = 0; f < S.mat.length; f++) {
-    const a = label[S.cp[S.tri[f * 3]]], b = label[S.cp[S.tri[f * 3 + 1]]], c = label[S.cp[S.tri[f * 3 + 2]]]
-    out[f] = b === c ? b : a
-  }
-  await tick()
-  smoothCuts(S, out)
-  return out
-}
-
-/** Macht die Schnittlinien glatt: erst Zacken aus einzelnen Dreiecken entfernen,
- *  dann die Punkte auf der Schnittlinie sanft zur Mitte ihrer Nachbarn schieben (wie eine Kurve). */
-function smoothCuts(S: Soup, lab: Int32Array) {
-  const T = S.mat.length, ek = (a: number, b: number) => (a < b ? a * 4194304 + b : b * 4194304 + a)
-  const pid = (f: number, k: number) => S.cp[S.tri[f * 3 + k]]
-  const faces = new Map<number, number[]>()
-  for (let f = 0; f < T; f++) for (let k = 0; k < 3; k++) {
-    const key = ek(pid(f, k), pid(f, (k + 1) % 3))
-    const l = faces.get(key); if (l) l.push(f); else faces.set(key, [f])
-  }
-  const nbF = (f: number) => {
-    const r: number[] = []
-    for (let k = 0; k < 3; k++) for (const g of faces.get(ek(pid(f, k), pid(f, (k + 1) % 3)))!) if (g !== f) r.push(g)
-    return r
-  }
-  // 1. Zacken weg: hat ein Dreieck zwei Nachbarn eines anderen Teils, wechselt es dorthin
-  for (let pass = 0; pass < 4; pass++) {
-    let changed = 0
-    for (let f = 0; f < T; f++) {
-      const ls = nbF(f).map((g) => lab[g])
-      for (const l of ls) if (l !== lab[f] && ls.filter((x) => x === l).length >= 2) { lab[f] = l; changed++; break }
-    }
-    if (!changed) break
-  }
-  // 2. Schnittlinie glätten
-  const V = S.P.length / 3
-  const bn: number[][] = Array.from({ length: V }, () => [])
-  for (const [key, fs] of faces) {
-    if (fs.length < 2 || fs.every((g) => lab[g] === lab[fs[0]])) continue
-    const a = Math.floor(key / 4194304), b = key % 4194304
-    bn[a].push(b); bn[b].push(a)
-  }
-  // Normale je Punkt (aus den Ecken), um nur entlang der Fläche zu schieben
-  const N = new Float64Array(V * 3)
-  for (let c = 0; c < S.cp.length; c++) { const p = S.cp[c]; N[p * 3] += S.cn[c * 3]; N[p * 3 + 1] += S.cn[c * 3 + 1]; N[p * 3 + 2] += S.cn[c * 3 + 2] }
-  const P = S.P
-  for (let it = 0; it < 5; it++) {
-    const next = new Map<number, [number, number, number]>()
-    for (let i = 0; i < V; i++) {
-      if (bn[i].length !== 2) continue // Ecken, an denen drei Teile zusammenstoßen, bleiben stehen
-      const [a, b] = bn[i]
-      let dx = (P[a * 3] + P[b * 3]) / 2 - P[i * 3], dy = (P[a * 3 + 1] + P[b * 3 + 1]) / 2 - P[i * 3 + 1], dz = (P[a * 3 + 2] + P[b * 3 + 2]) / 2 - P[i * 3 + 2]
-      const nl = Math.hypot(N[i * 3], N[i * 3 + 1], N[i * 3 + 2]) || 1
-      const nx = N[i * 3] / nl, ny = N[i * 3 + 1] / nl, nz = N[i * 3 + 2] / nl, d = dx * nx + dy * ny + dz * nz
-      dx -= d * nx; dy -= d * ny; dz -= d * nz
-      next.set(i, [P[i * 3] + dx * 0.5, P[i * 3 + 1] + dy * 0.5, P[i * 3 + 2] + dz * 0.5])
-    }
-    for (const [i, q] of next) { P[i * 3] = q[0]; P[i * 3 + 1] = q[1]; P[i * 3 + 2] = q[2] }
-  }
+  return { vlab: label, seeds }
 }

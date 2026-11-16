@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { loadModel, partition, refine, soupOf } from './cut'
 import { type Piece, buildPieces } from './pieces'
+import { jigsaw } from './jigsaw'
 import { modelFile } from './models'
 
 const HINT = 0xffc94d
@@ -46,10 +47,12 @@ async function cutModel(modelId: string, count: number, seed: number) {
   const scene = await loadModel(modelFile(modelId))
   await tick()
   const S = soupOf(scene)
-  await refine(S, count <= 40 ? 16000 : count <= 120 ? 26000 : 38000)
-  const lab = await partition(S, count, seed + count * 7)
+  await refine(S, count <= 40 ? 18000 : count <= 120 ? 30000 : 48000)
+  const { vlab, seeds } = await partition(S, count, seed + count * 7)
   await tick()
-  return await buildPieces(S, lab, count)
+  const cutUp = await jigsaw(S, vlab, seeds, seed + count)
+  await tick()
+  return await buildPieces(cutUp.S, cutUp.lab, count)
 }
 
 function groundShadow(radius: number, y: number) {
