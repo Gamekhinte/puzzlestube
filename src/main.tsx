@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { Component, type ReactNode, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
@@ -11,7 +11,13 @@ void cleanOldGames()
 // Den screame-Startbildschirm kurz stehen lassen, dann die App zeigen.
 const started = performance.now()
 const root = document.getElementById('root')!
-const show = () => createRoot(root).render(<StrictMode><App /></StrictMode>)
+class Fehlergrenze extends Component<{ children: ReactNode }, { err: string }> {
+  state = { err: '' }
+  static getDerivedStateFromError(e: unknown) { return { err: String((e as Error)?.message || e) } }
+  componentDidCatch(e: unknown) { (window as unknown as { __zeigeFehler?: (m: string) => void }).__zeigeFehler?.('App: ' + String((e as Error)?.message || e)) }
+  render() { return this.state.err ? <div style={{ padding: 24, fontSize: 20 }}>Die Puzzlestube konnte nicht starten.</div> : this.props.children }
+}
+const show = () => createRoot(root).render(<StrictMode><Fehlergrenze><App /></Fehlergrenze></StrictMode>)
 setTimeout(show, Math.max(0, 900 - (performance.now() - started)))
 
 // Kein Zoomen der ganzen Seite per Doppeltipp oder Geste, das stört beim Puzzeln.

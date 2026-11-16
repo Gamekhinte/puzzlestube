@@ -32,6 +32,30 @@
       </div>
     </div>
     <script>
+      // Fehleranzeige: Stürzt etwas ab, steht die Meldung auf dem Bildschirm statt einer leeren Seite.
+      (function () {
+        var shown = false;
+        function zeige(msg) {
+          try {
+            var box = document.getElementById('fehler');
+            if (!box) {
+              box = document.createElement('div');
+              box.id = 'fehler';
+              box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;background:#fffdf8;color:#2B2118;border:2px solid #A8432F;border-radius:10px;padding:14px 16px;font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.25)';
+              box.innerHTML = '<b style="font-size:19px">Da ist etwas schiefgelaufen.</b><div id="fehlertext" style="margin:8px 0;font:13px Menlo,Consolas,monospace;word-break:break-word;color:#5C4A3A"></div>' +
+                '<button id="fehlerneu" style="min-height:48px;padding:0 20px;border-radius:10px;border:0;background:#25584D;color:#fff;font:600 18px -apple-system,Arial,sans-serif">Neu laden</button>';
+              document.body.appendChild(box);
+              document.getElementById('fehlerneu').onclick = function () { location.reload(); };
+            }
+            var t = document.getElementById('fehlertext');
+            if (t.textContent.length < 600) t.textContent += (t.textContent ? ' | ' : '') + msg + ' (' + navigator.userAgent.replace(/^.*?\((.*?)\).*$/, '$1') + ')';
+            shown = true;
+          } catch (e) {}
+        }
+        window.__zeigeFehler = zeige;
+        window.addEventListener('error', function (e) { zeige(String(e.message || e.error || 'Fehler') + (e.filename ? ' @' + String(e.filename).split('/').pop() + ':' + e.lineno : '')); });
+        window.addEventListener('unhandledrejection', function (e) { var r = e.reason; zeige('Promise: ' + String((r && (r.message || r)) || 'unbekannt')); });
+      })();
       // Notbremse: Startet die App nicht, Knopf zeigen, der den alten Offline-Speicher leert und neu lädt.
       setTimeout(function () {
         var b = document.getElementById('neu');
