@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { type Game, all, gameId, imageInfo } from '../db'
-import { Modal, SIZES, grid } from './common'
+import { Icon, Modal, SIZES, grid } from './common'
+import { ImageViewer } from './ImageViewer'
 
 interface Props { imageId: string; onStart: (cols: number, rows: number) => void; onClose: () => void }
 
@@ -9,6 +10,7 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
   const [info, setInfo] = useState<{ title: string; thumb: string } | null>(null)
   const [aspect, setAspect] = useState(4 / 3)
   const [saved, setSaved] = useState<Record<string, number>>({})
+  const [big, setBig] = useState(false)
 
   useEffect(() => {
     let dead = false
@@ -32,7 +34,11 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
     <Modal title="Wie viele Teile?" onClose={onClose} wide>
       {info && (
         <div className="mb-4">
-          <img src={info.thumb} alt="" className="mb-2 max-h-[200px] w-full rounded-xl object-cover" draggable={false} />
+          {/* antippen: Bild in voller Größe ansehen */}
+          <button className="relative mb-2 block w-full" onClick={() => setBig(true)} aria-label="Bild groß ansehen" title="Bild groß ansehen">
+            <img src={info.thumb} alt="" className="max-h-[200px] w-full rounded-xl object-cover" draggable={false} />
+            <span className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-lg bg-[#fffdf8]/90 text-ink shadow-sm"><Icon name="zoomin" size={22} /></span>
+          </button>
           <div className="truncate text-[21px] font-bold">{info.title}</div>
         </div>
       )}
@@ -48,6 +54,7 @@ export function PieceCountModal({ imageId, onStart, onClose }: Props) {
           )
         })}
       </div>
+      {big && <ImageViewer imageId={imageId} title={info?.title} onClose={() => setBig(false)} />}
     </Modal>
   )
 }
