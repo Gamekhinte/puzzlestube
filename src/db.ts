@@ -1,7 +1,7 @@
 // Alles bleibt auf dem Gerät: Fotos, Alben und Spielstände liegen in IndexedDB.
 import type { SavedState } from './puzzle/engine'
 import { GALLERY, galleryThumb, loadGallery } from './gallery'
-import { MODELS } from './three/models'
+import { MODELS, STUFEN } from './three/models'
 
 export interface Album { id: string; name: string; createdAt: number }
 export interface Photo { id: string; albumId: string; name: string; blob: Blob; thumb: string; createdAt: number }
@@ -130,6 +130,6 @@ export function keepStorage() {
 
 /** Räumt Spielstände weg, deren Galeriebild oder 3D-Modell es nicht mehr gibt. */
 export async function cleanOldGames() {
-  for (const g of await all<Game3D>('games3d')) if (!MODELS.some((m) => m.id === g.model)) await del('games3d', g.id)
+  for (const g of await all<Game3D>('games3d')) if (!MODELS.some((m) => m.id === g.model) || !STUFEN.some(([n]) => n === g.count)) await del('games3d', g.id)
   for (const g of await all<Game>('games')) if (/^[gfi]:/.test(g.imageId) && !GALLERY.some((x) => x.id === g.imageId)) await del('games', g.id)
 }

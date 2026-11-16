@@ -2,7 +2,7 @@
 // dunklem Umriss zu sehen, ein Teil rastet ein, wenn man es auf seinen Platz legt. Dafür muss der Platz vorne sein.
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { loadModel, partition, refine, soupOf } from './cut'
+import { loadModel, refine, soupOf } from './cut'
 import { type Piece, buildPieces } from './pieces'
 import { jigsaw } from './jigsaw'
 import { modelFile } from './models'
@@ -47,12 +47,11 @@ async function cutModel(modelId: string, count: number, seed: number) {
   const scene = await loadModel(modelFile(modelId))
   await tick()
   const S = soupOf(scene)
-  await refine(S, count <= 40 ? 18000 : count <= 120 ? 30000 : 48000)
-  const { vlab, seeds } = await partition(S, count, seed + count * 7)
+  await refine(S, count <= 40 ? 12000 : count <= 120 ? 22000 : 32000)
+  // Raster wie bei einem echten Puzzle: 6 Würfelseiten mit gleich großen Feldern
+  const cutUp = await jigsaw(S, null, null, seed + count, { target: count })
   await tick()
-  const cutUp = await jigsaw(S, vlab, seeds, seed + count)
-  await tick()
-  return await buildPieces(cutUp.S, cutUp.lab, count)
+  return await buildPieces(cutUp.S, cutUp.lab, cutUp.n)
 }
 
 function groundShadow(radius: number, y: number) {

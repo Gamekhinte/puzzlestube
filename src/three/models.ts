@@ -19,21 +19,17 @@ export const MODELS: ModelDef[] = [
   { id: 'brass_vase_01', name: 'Messingvase', cat: 'Haus und Küche' },
   { id: 'jug_01', name: 'Krug', cat: 'Haus und Küche' },
   { id: 'pot_enamel_01', name: 'Emailletopf', cat: 'Haus und Küche' },
-  { id: 'watering_can_metal_01', name: 'Gießkanne', cat: 'Haus und Küche' },
   { id: 'alarm_clock_01', name: 'Wecker', cat: 'Uhren und Lampen' },
   { id: 'mantel_clock_01', name: 'Kaminuhr', cat: 'Uhren und Lampen' },
   { id: 'wooden_lantern_01', name: 'Laterne', cat: 'Uhren und Lampen' },
   { id: 'rubber_duck_toy', name: 'Quietscheente', cat: 'Tiere und Figuren' },
   { id: 'garden_gnome', name: 'Gartenzwerg', cat: 'Tiere und Figuren' },
   { id: 'concrete_cat_statue', name: 'Katze aus Stein', cat: 'Tiere und Figuren' },
-  { id: 'horse_statue_01', name: 'Pferd', cat: 'Tiere und Figuren' },
   { id: 'carved_wooden_elephant', name: 'Holzelefant', cat: 'Tiere und Figuren' },
-  { id: 'bronze_whale_statue', name: 'Wal aus Bronze', cat: 'Tiere und Figuren' },
-  { id: 'lambis_shell', name: 'Muschel', cat: 'Tiere und Figuren' },
 ]
 
 /** Teilezahlen der drei Stufen. */
-export const STUFEN: [number, string][] = [[36, 'Leicht'], [112, 'Mittel'], [250, 'Schwer']]
+export const STUFEN: [number, string][] = [[24, 'Leicht'], [96, 'Mittel'], [216, 'Schwer']]
 
 export const modelFile = (id: string) => `modelle/${id}.glb`
 export const modelThumb = (id: string) => `modelle/${id}.webp`

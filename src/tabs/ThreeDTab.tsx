@@ -3,7 +3,7 @@ import { MODELS, MODEL_CATS, STUFEN, modelThumb } from '../three/models'
 import { type Game3D, all } from '../db'
 
 export function ThreeDTab({ onPlay }: { onPlay: (model: string, count: number) => void }) {
-  const [count, setCount] = useState<number>(() => { try { const n = Number(localStorage.getItem('stufe3d')); return STUFEN.some(([s]) => s === n) ? n : 36 } catch { return 36 } })
+  const [count, setCount] = useState<number>(() => { try { const n = Number(localStorage.getItem('stufe3d')); return STUFEN.some(([s]) => s === n) ? n : 24 } catch { return 24 } })
   const [saved, setSaved] = useState<Record<string, number>>({})
 
   useEffect(() => {

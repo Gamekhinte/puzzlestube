@@ -86,31 +86,36 @@ export async function buildPieces(S: Soup, lab: Int32Array, n: number): Promise<
     outer.computeBoundingSphere()
 
     // Innenschale (nach innen versetzt, umgedreht) und Schnittkante
-    const ip: number[] = [], inn: number[] = []
-    const P3 = (o: number) => [pos[o * 3], pos[o * 3 + 1], pos[o * 3 + 2]]
-    const I3 = (o: number) => [pos[o * 3] - nor[o * 3] * thick, pos[o * 3 + 1] - nor[o * 3 + 1] * thick, pos[o * 3 + 2] - nor[o * 3 + 2] * thick]
-    for (let t = 0; t < sorted.length; t++) {
-      for (const k of [0, 2, 1]) { const o = t * 3 + k; ip.push(...I3(o)); inn.push(-nor[o * 3], -nor[o * 3 + 1], -nor[o * 3 + 2]) }
-    }
-    const wall = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3()
-    const pushTri = (a: number[], b: number[], c: number[]) => {
-      e1.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); e2.set(c[0] - a[0], c[1] - a[1], c[2] - a[2])
-      wall.crossVectors(e1, e2).normalize()
-      ip.push(...a, ...b, ...c)
-      for (let i = 0; i < 3; i++) inn.push(wall.x, wall.y, wall.z)
-    }
+    // feste Speicherblöcke statt wachsender Listen (auf dem Handy deutlich schneller)
+    const rimEdges: number[] = []
     sorted.forEach((f, t) => {
-      for (let k = 0; k < 3; k++) {
-        const a = S.cp[S.tri[f * 3 + k]], b = S.cp[S.tri[f * 3 + ((k + 1) % 3)]]
-        if (use.get(ek(a, b)) !== 1) continue
-        const oa = t * 3 + k, ob = t * 3 + ((k + 1) % 3)
-        const ao = P3(oa), bo = P3(ob), ai = I3(oa), bi = I3(ob)
-        pushTri(ao, ai, bi); pushTri(ao, bi, bo)
-      }
+      for (let k = 0; k < 3; k++) if (use.get(ek(S.cp[S.tri[f * 3 + k]], S.cp[S.tri[f * 3 + ((k + 1) % 3)]])) === 1) rimEdges.push(t * 3 + k, t * 3 + ((k + 1) % 3))
     })
+    const M = N + (rimEdges.length / 2) * 6
+    const ip = new Float32Array(M * 3), inn = new Float32Array(M * 3)
+    let w = 0
+    const putIn = (o: number, nx: number, ny: number, nz: number) => {
+      ip[w * 3] = pos[o * 3] - nor[o * 3] * thick; ip[w * 3 + 1] = pos[o * 3 + 1] - nor[o * 3 + 1] * thick; ip[w * 3 + 2] = pos[o * 3 + 2] - nor[o * 3 + 2] * thick
+      inn[w * 3] = nx; inn[w * 3 + 1] = ny; inn[w * 3 + 2] = nz; w++
+    }
+    const putOut = (o: number, nx: number, ny: number, nz: number) => {
+      ip[w * 3] = pos[o * 3]; ip[w * 3 + 1] = pos[o * 3 + 1]; ip[w * 3 + 2] = pos[o * 3 + 2]
+      inn[w * 3] = nx; inn[w * 3 + 1] = ny; inn[w * 3 + 2] = nz; w++
+    }
+    for (let t = 0; t < sorted.length; t++) for (const k of [0, 2, 1]) { const o = t * 3 + k; putIn(o, -nor[o * 3], -nor[o * 3 + 1], -nor[o * 3 + 2]) }
+    for (let i = 0; i < rimEdges.length; i += 2) {
+      const oa = rimEdges[i], ob = rimEdges[i + 1]
+      // Wandnormale: Kante mal Flächennormale (zeigt aus dem Teil heraus)
+      const ex = pos[ob * 3] - pos[oa * 3], ey = pos[ob * 3 + 1] - pos[oa * 3 + 1], ez = pos[ob * 3 + 2] - pos[oa * 3 + 2]
+      const mx = nor[oa * 3] + nor[ob * 3], my = nor[oa * 3 + 1] + nor[ob * 3 + 1], mz = nor[oa * 3 + 2] + nor[ob * 3 + 2]
+      let nx = ey * mz - ez * my, ny = ez * mx - ex * mz, nz = ex * my - ey * mx
+      const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l
+      putOut(oa, nx, ny, nz); putIn(oa, nx, ny, nz); putIn(ob, nx, ny, nz)
+      putOut(oa, nx, ny, nz); putIn(ob, nx, ny, nz); putOut(ob, nx, ny, nz)
+    }
     const inner = new THREE.BufferGeometry()
-    inner.setAttribute('position', new THREE.Float32BufferAttribute(ip, 3))
-    inner.setAttribute('normal', new THREE.Float32BufferAttribute(inn, 3))
+    inner.setAttribute('position', new THREE.BufferAttribute(ip, 3))
+    inner.setAttribute('normal', new THREE.BufferAttribute(inn, 3))
 
     const mats = matList.map((mi) => outerMat(S.materials[mi]))
     const body = new THREE.MeshStandardMaterial({ color: 0xe6d6bb, roughness: 0.8, metalness: 0, side: THREE.DoubleSide })
@@ -122,7 +127,7 @@ export async function buildPieces(S: Soup, lab: Int32Array, n: number): Promise<
     const gGeo = outer.clone()
     gGeo.setAttribute('color', new THREE.BufferAttribute(colG, 3))
     gGeo.clearGroups()
-    const ghostMat = new THREE.MeshStandardMaterial({ color: 0xa89a84, vertexColors: true, roughness: 0.95, envMapIntensity: 0.5, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
+    const ghostMat = new THREE.MeshStandardMaterial({ color: 0x8a8174, vertexColors: true, roughness: 0.95, envMapIntensity: 0.5, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
     const ghost = new THREE.Mesh(gGeo, ghostMat)
 
     // Mitte auf der Oberfläche, mittlere Richtung, Größe
