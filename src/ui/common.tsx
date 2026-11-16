@@ -41,7 +41,7 @@ export function Logo({ size = 40, animated = false }: { size?: number; animated?
 export function Loading({ text }: { text: string }) {
   return (
     <div className="einblenden tisch absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 px-6 text-center" role="status">
-      <Logo size={112} animated />
+      <Logo size={Math.round(Math.min(260, Math.min(window.innerWidth * 0.5, window.innerHeight * 0.36)))} animated />
       <div className="h2">{text}</div>
       <div className="text-ink2">Puzzlestube von screame</div>
     </div>
