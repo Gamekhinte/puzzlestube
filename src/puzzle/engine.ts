@@ -80,6 +80,7 @@ export class PuzzleEngine {
   // Leiste unten: lose Einzelteile, die noch nicht auf dem Tisch liegen
   private tray: number[] = []
   private trayScroll = 0
+  private trayDesign = loadTrayDesign()
   private trayVel = 0
   private trayT = 0
   private trayTouch: { id: number; x0: number; y0: number; scroll0: number; piece: number; mode: 0 | 1; lx: number; lt: number } | null = null
@@ -363,6 +364,7 @@ export class PuzzleEngine {
     this.invalidate()
   }
 
+  setTrayDesign(id: string) { this.trayDesign = id; saveTrayDesign(id); this.invalidate() }
   setEdgesOnly(v: boolean) { this.edgesOnly = v; this.trayScroll = 0; this.trayVel = 0; this.invalidate() }
   setPreview(v: boolean) { this.showPreview = v; this.invalidate() }
   setLocked(v: boolean) { this.locked = v; if (v) this.pan = null }
@@ -717,8 +719,7 @@ export class PuzzleEngine {
       // Leiste liegt halbdurchsichtig auf dem Holz statt als weißer Balken
       const kante = c.createLinearGradient(0, top - 10, 0, top); kante.addColorStop(0, 'rgba(40,24,10,0)'); kante.addColorStop(1, 'rgba(40,24,10,0.10)')
       c.fillStyle = kante; c.fillRect(0, top - 10, this.cw, 10)
-      c.fillStyle = 'rgba(248,240,228,0.55)'; c.fillRect(0, top, this.cw, H)
-      c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(0, top, this.cw, 1)
+      paintTray(c, this.trayDesign, top, this.cw, H)
       c.imageSmoothingQuality = 'high'
       const k = (ts - 6) / (Math.max(this.pw, this.ph) * 1.45)
       const sw = (this.pw + this.mx * 2) * k, sh = (this.ph + this.my * 2) * k
@@ -882,4 +883,56 @@ export function edgeTo(p: Path2D, e: Edge, x0: number, y0: number, len: number, 
 /** Zufällige Kante mit Nase, für 2D und für die 3D-Puzzles. */
 export function makeEdge(r: () => number): Edge {
   return { flip: r() < 0.5 ? 1 : -1, a: u(r), b: u(r), c: u(r), d: u(r), e: u(r) }
+}
+
+// Designs für die Ablage-Leiste unten. Auswahl wird gemerkt.
+export const TRAY_DESIGNS: { id: string; name: string; swatch: string }[] = [
+  { id: 'weiss', name: 'Weiß', swatch: '#ffffff' },
+  { id: 'glas', name: 'Durchsichtig', swatch: 'repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0/12px 12px' },
+  { id: 'creme', name: 'Creme', swatch: '#f4ead8' },
+  { id: 'weihnachten', name: 'Weihnachten', swatch: 'repeating-linear-gradient(45deg,#b3202a 0 8px,#fff 8px 12px)' },
+  { id: 'tanne', name: 'Tanne', swatch: 'radial-gradient(#f5d36b 15%, transparent 16%) 0 0/14px 14px, #1f5a3a' },
+  { id: 'schnee', name: 'Schnee', swatch: 'radial-gradient(#fff 18%, transparent 20%) 0 0/10px 10px, #a9cbe6' },
+  { id: 'nacht', name: 'Sternennacht', swatch: 'radial-gradient(#fff6c8 12%, transparent 14%) 0 0/13px 13px, #1c2440' },
+  { id: 'mint', name: 'Mint', swatch: '#cdeee0' },
+  { id: 'rosa', name: 'Rosa', swatch: '#f7d6e0' },
+  { id: 'gold', name: 'Gold', swatch: 'linear-gradient(135deg,#f6e3a1,#c9a24a,#f6e3a1)' },
+]
+const TRAY_KEY = 'pz-leiste'
+function loadTrayDesign() { try { return localStorage.getItem(TRAY_KEY) || 'weiss' } catch { return 'weiss' } }
+function saveTrayDesign(id: string) { try { localStorage.setItem(TRAY_KEY, id) } catch { /* egal */ } }
+
+function dots(c: CanvasRenderingContext2D, top: number, w: number, H: number, col: string, seed: number, n: number, rmax: number) {
+  const r = rng(seed); c.fillStyle = col
+  for (let i = 0; i < n; i++) { c.beginPath(); c.arc(r() * w, top + r() * H, 0.8 + r() * rmax, 0, 6.283); c.fill() }
+}
+function paintTray(c: CanvasRenderingContext2D, id: string, top: number, w: number, H: number) {
+  const fill = (s: string | CanvasGradient) => { c.fillStyle = s; c.fillRect(0, top, w, H) }
+  const n = Math.round(w * H / 2500)
+  c.save(); c.beginPath(); c.rect(0, top, w, H); c.clip()
+  switch (id) {
+    case 'glas': fill('rgba(255,255,255,0.08)'); break
+    case 'creme': fill('rgba(248,240,228,0.92)'); break
+    case 'weihnachten': {
+      fill('#b3202a')
+      c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 14
+      for (let x = -H; x < w + H; x += 44) { c.beginPath(); c.moveTo(x, top + H); c.lineTo(x + H, top); c.stroke() }
+      c.fillStyle = '#1f5a3a'; c.fillRect(0, top, w, 5); c.fillStyle = '#f5d36b'; c.fillRect(0, top + 5, w, 2)
+      break
+    }
+    case 'tanne': fill('#1f5a3a'); dots(c, top, w, H, 'rgba(245,211,107,0.55)', 7, n, 2); break
+    case 'schnee': {
+      const g = c.createLinearGradient(0, top, 0, top + H); g.addColorStop(0, '#9fc3e2'); g.addColorStop(1, '#e8f2fb'); fill(g)
+      dots(c, top, w, H, 'rgba(255,255,255,0.9)', 11, n, 2.6); break
+    }
+    case 'nacht': fill('#1c2440'); dots(c, top, w, H, 'rgba(255,246,200,0.8)', 3, n, 1.4); break
+    case 'mint': fill('#cdeee0'); break
+    case 'rosa': fill('#f7d6e0'); break
+    case 'gold': {
+      const g = c.createLinearGradient(0, top, w, top + H); g.addColorStop(0, '#f6e3a1'); g.addColorStop(0.5, '#d8b663'); g.addColorStop(1, '#f6e3a1'); fill(g); break
+    }
+    default: fill('#ffffff')
+  }
+  c.restore()
+  c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(0, top, w, 1)
 }
