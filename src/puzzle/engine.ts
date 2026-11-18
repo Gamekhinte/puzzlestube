@@ -108,6 +108,10 @@ export class PuzzleEngine {
     const piece = Math.min((source.width * s) / this.cols, (source.height * s) / this.rows)
     if (piece < 120) s *= 120 / piece
     s = Math.min(s, Math.sqrt(budget / (source.width * source.height)))
+    // iPads/iPhones: Safari erlaubt nur begrenzt Canvas-Speicher, sonst bleibt alles leer.
+    // Teil-Bilder brauchen ca. 5x die Bildfläche, dazu Bild und Ablage: zusammen ca. 7x.
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent))
+    if (ios) s = Math.min(s, Math.sqrt(1.6e6 / (source.width * source.height)))
     this.W = Math.round(source.width * s)
     this.H = Math.round(source.height * s)
     this.img = document.createElement('canvas')
@@ -158,6 +162,10 @@ export class PuzzleEngine {
     c.removeEventListener('pointerup', this.onUp)
     c.removeEventListener('pointercancel', this.onUp)
     c.removeEventListener('wheel', this.onWheel)
+    // Canvas-Speicher sofort freigeben (Safari räumt sonst sehr spät auf)
+    for (const sp of this.sprites) { sp.width = sp.height = 0 }
+    this.sprites = []
+    for (const cv of [this.img, this.lockedLayer, this.still]) { cv.width = cv.height = 0 }
   }
 
   // ---------- Aufbau ----------
