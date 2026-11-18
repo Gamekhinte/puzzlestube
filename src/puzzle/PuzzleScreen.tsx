@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { PuzzleEngine } from './engine'
+import { PuzzleEngine, TRAY_DESIGNS } from './engine'
 import { type Game, del, gameId, get, imageInfo, loadImage, put } from '../db'
 import { Confirm, Icon, Loading, Modal } from '../ui/common'
 import { click, fanfare, setSound, soundOn } from '../sound'
@@ -17,6 +17,7 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
   const [showDone, setShowDone] = useState(false)
   const [preview, setPreview] = useState(false)
   const [edges, setEdges] = useState(false)
+  const [trayD, setTrayD] = useState(() => { try { return localStorage.getItem('pz-leiste') || 'weiss' } catch { return 'weiss' } })
   const [board, setBoard] = useState(false)
   // Bild festhalten ist von selbst an, damit man beim Danebentippen nicht dauernd das ganze Bild verschiebt
   const [lock, setLock] = useState(true)
@@ -167,6 +168,18 @@ export function PuzzleScreen({ imageId, cols, rows, onExit }: Props) {
             <button className="btn justify-start" onClick={() => { setMenu(false); setBoard(true); eng?.setBoardOnly(true) }}>
               <Icon name="fit" /><span>Nur das Brett zeigen</span>
             </button>
+            <div>
+              <p className="mb-2 text-[17px]">Leiste unten</p>
+              <div className="grid grid-cols-5 gap-2">
+                {TRAY_DESIGNS.map((d) => (
+                  <button key={d.id} onClick={() => { setTrayD(d.id); eng?.setTrayDesign(d.id) }} aria-label={d.name} title={d.name}
+                    className="flex flex-col items-center gap-1 text-[12px]">
+                    <span className="block h-11 w-11 rounded-xl border-2" style={{ background: d.swatch, borderColor: trayD === d.id ? '#b3202a' : 'rgba(0,0,0,0.15)' }} />
+                    <span className="leading-tight">{d.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <button className="btn btn-danger justify-start" onClick={() => setAskRestart(true)}>
               <Icon name="reset" /><span>Neu beginnen</span>
             </button>
