@@ -174,6 +174,10 @@ export class PuzzleEngine {
     }
     const m = Math.min(pw, ph)
     const lineW = (this.lineW = Math.max(1, m * 0.016))
+    // Langsame Geräte (alte iPads): nach den ersten Teilen messen und dann auf eine
+    // schnelle Kante ohne Weichzeichner umschalten. Sieht fast gleich aus, lädt aber viel schneller.
+    let lite = false, made = 0
+    const t0 = performance.now()
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const p = new Path2D()
@@ -194,7 +198,7 @@ export class PuzzleEngine {
         const thick = m * 0.055
         c.save()
         c.shadowColor = 'rgba(30,16,6,0.55)'
-        c.shadowBlur = m * 0.13
+        c.shadowBlur = lite ? m * 0.06 : m * 0.13
         c.shadowOffsetX = m * 0.03
         c.shadowOffsetY = m * 0.09
         c.translate(thick * 0.5, thick)
@@ -217,13 +221,17 @@ export class PuzzleEngine {
         c.restore()
         // gewölbte Kante: weicher Innenschatten, Licht von oben links, Schatten unten rechts
         const many = this.total > 500
-        this.emboss(c, p, m * 0.045, m * 0.09, 'rgba(255,255,255,0.75)', 'rgba(20,10,0,0.55)')
-        if (!many) this.emboss(c, p, m * 0.014, m * 0.02, 'rgba(255,255,255,0.55)', 'rgba(20,10,0,0.4)')
+        if (lite) this.bevel(c, p, m)
+        else {
+          this.emboss(c, p, m * 0.045, m * 0.09, 'rgba(255,255,255,0.75)', 'rgba(20,10,0,0.55)')
+          if (!many) this.emboss(c, p, m * 0.014, m * 0.02, 'rgba(255,255,255,0.55)', 'rgba(20,10,0,0.4)')
+        }
         c.lineJoin = 'round'
         c.lineWidth = lineW * 0.9
         c.strokeStyle = 'rgba(30,20,12,0.6)'
         c.stroke(p)
         this.sprites.push(sp)
+        if (!lite && ++made === 16 && (performance.now() - t0) / made > 3) lite = true
       }
     }
   }
@@ -231,7 +239,8 @@ export class PuzzleEngine {
   /** Innenschatten an der Kante eines Teils: hell oben links, dunkel unten rechts (wirkt gewölbt). */
   private emboss(c: CanvasRenderingContext2D, p: Path2D, off: number, blur: number, light: string, dark: string) {
     const ring = new Path2D()
-    ring.rect(-this.W, -this.H, this.W * 3, this.H * 3)
+    // Rahmen nur so groß wie das Teil-Bild: ein riesiger Rahmen macht den Weichzeichner sehr langsam
+    ring.rect(-this.mx - blur * 2, -this.my - blur * 2, this.pw + (this.mx + blur * 2) * 2, this.ph + (this.my + blur * 2) * 2)
     ring.addPath(p)
     for (const [col, d] of [[light, 1], [dark, -1]] as const) {
       c.save()
@@ -241,6 +250,15 @@ export class PuzzleEngine {
       c.fill(ring, 'evenodd')
       c.restore()
     }
+  }
+
+  /** Schnelle Kante ohne Weichzeichner: helle und dunkle Linie innen an der Kante. */
+  private bevel(c: CanvasRenderingContext2D, p: Path2D, m: number) {
+    c.save(); c.clip(p); c.lineJoin = 'round'
+    for (const [col, w, d] of [['rgba(255,255,255,0.45)', m * 0.07, 1], ['rgba(20,10,0,0.35)', m * 0.07, -1], ['rgba(255,255,255,0.35)', m * 0.03, 1], ['rgba(20,10,0,0.3)', m * 0.03, -1]] as const) {
+      c.save(); c.translate(m * 0.018 * d, m * 0.018 * d); c.strokeStyle = col; c.lineWidth = w; c.stroke(p); c.restore()
+    }
+    c.restore()
   }
 
   private isEdge(i: number) {
